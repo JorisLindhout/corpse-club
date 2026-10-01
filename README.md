@@ -193,7 +193,7 @@ src/
     server/            D1 access, Web Push, notifications, reminders, Images assembly
     image.ts           client-side encoding, cropping, bleaching, assembly
   routes/              pages and API routes
-static/                icons
+static/                icons and favicon.ico (rendered by `npm run icons`)
 workers/app.ts         Worker entry: SvelteKit fetch plus the hourly cron
 wrangler.toml          Worker config: assets, cron, D1, R2, Images, vars
 wrangler.adapter.toml  tells the adapter where to write its build
