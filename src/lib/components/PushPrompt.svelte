@@ -74,10 +74,13 @@
 			{reason} On iPhone, summons only reach Corpse Club from your Home Screen.
 		</p>
 		<ol>
-			<li>Copy your mark below.</li>
 			<li>Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</li>
-			<li>Open Corpse Club from the Home Screen and paste the mark in My Corpses.</li>
+			<li>Open Corpse Club from your Home Screen. Your corpses follow.</li>
+			<li>Open this corpse there and ask to be summoned.</li>
 		</ol>
+		<p class="muted small">
+			If your corpses do not follow, copy your mark and adopt it under My corpses in the app.
+		</p>
 		<button class="btn block" type="button" onclick={copyMark}>
 			{copied ? 'Mark copied' : 'Copy your mark'}
 		</button>
@@ -117,5 +120,9 @@
 
 	strong {
 		font-weight: 600;
+	}
+
+	.small {
+		font-size: 0.8rem;
 	}
 </style>

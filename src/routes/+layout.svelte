@@ -1,19 +1,36 @@
 <script lang="ts">
 	import '../app.css';
-	import { onMount } from 'svelte';
-	import { invalidateAll, onNavigate } from '$app/navigation';
+	import { afterNavigate, invalidateAll, onNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { syncDevice } from '$lib/device';
+	import { adoptInstallMark, syncDevice } from '$lib/device';
+	import { isStandalone } from '$lib/push';
 
 	let { children, data } = $props();
 
 	let immersive = $derived(page.route.id?.startsWith('/draw') ?? false);
 	let home = $derived(page.route.id === '/');
+	let manifest = $derived(
+		data.deviceId ? `/manifest.webmanifest?mark=${data.deviceId}` : '/manifest.webmanifest'
+	);
 
-	onMount(() => {
-		if (syncDevice(data.deviceId)) invalidateAll();
+	afterNavigate(({ type }) => {
+		if (type === 'enter') queueMicrotask(claimDevice);
 	});
+
+	// The router only accepts replaceState once the entry navigation has settled.
+	function claimDevice() {
+		const mark = page.url.searchParams.get('mark');
+		if (mark !== null && page.route.id === '/my-corpses') {
+			const adopted = isStandalone() && adoptInstallMark(mark);
+			replaceState(resolve('/my-corpses'), page.state);
+			if (adopted) {
+				invalidateAll();
+				return;
+			}
+		}
+		if (syncDevice(data.deviceId)) invalidateAll();
+	}
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -28,6 +45,7 @@
 
 <svelte:head>
 	<title>Corpse Club</title>
+	<link rel="manifest" href={manifest} />
 	<meta
 		name="description"
 		content="Exquisite corpse for three hands. Draw on paper. Reveal together."

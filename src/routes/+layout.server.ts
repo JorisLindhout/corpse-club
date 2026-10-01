@@ -1,4 +1,5 @@
 import type { LayoutServerLoad } from './$types';
+import { building } from '$app/environment';
 
 export const load: LayoutServerLoad = ({ locals, platform }) => {
 	let vapidPublicKey = '';
@@ -7,5 +8,6 @@ export const load: LayoutServerLoad = ({ locals, platform }) => {
 	} catch {
 		// Prerendered routes have no platform bindings.
 	}
-	return { deviceId: locals.deviceId, vapidPublicKey };
+	// A prerendered page must not bake a random mark into its HTML.
+	return { deviceId: building ? '' : locals.deviceId, vapidPublicKey };
 };

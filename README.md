@@ -6,16 +6,16 @@ No accounts. Turns are handed over with invite links, devices are tracked with a
 
 ## Stack
 
-| Layer              | Technology                                                 |
-| ------------------ | ---------------------------------------------------------- |
-| Frontend           | SvelteKit (Svelte 5, runes)                                |
-| Hosting            | Cloudflare Pages via `@sveltejs/adapter-cloudflare`        |
-| API                | SvelteKit server routes, running on Workers                |
-| Database           | Cloudflare D1                                              |
-| Images             | Cloudflare R2                                              |
-| Push notifications | Web Push with VAPID, implemented on WebCrypto              |
-| Scheduled jobs     | Companion Worker with a cron trigger (`workers/cron`)      |
-| PWA                | SvelteKit service worker and `static/manifest.webmanifest` |
+| Layer              | Technology                                                        |
+| ------------------ | ----------------------------------------------------------------- |
+| Frontend           | SvelteKit (Svelte 5, runes)                                       |
+| Hosting            | Cloudflare Pages via `@sveltejs/adapter-cloudflare`               |
+| API                | SvelteKit server routes, running on Workers                       |
+| Database           | Cloudflare D1                                                     |
+| Images             | Cloudflare R2                                                     |
+| Push notifications | Web Push with VAPID, implemented on WebCrypto                     |
+| Scheduled jobs     | Companion Worker with a cron trigger (`workers/cron`)             |
+| PWA                | SvelteKit service worker and a per-device `/manifest.webmanifest` |
 
 ### How the pieces fit
 
@@ -138,7 +138,7 @@ On first visit the server sets a random device ID cookie (`cc_device`), which th
 
 ### Push and iOS
 
-Permission is requested only after a section is sealed, in response to a tap ("Summon me"). Subscriptions are stored per corpse and device. On iOS, Web Push only works for Home Screen apps, so on iOS Safari the prompt explains how to install. Home Screen apps on iOS don't share storage with Safari, so **My Corpses** lets you copy this device's mark and adopt it in the installed app.
+Permission is requested only after a section is sealed, in response to a tap ("Summon me"). Subscriptions are stored per corpse and device. On iOS, Web Push only works for Home Screen apps, so on iOS Safari the prompt explains how to install. Home Screen apps on iOS don't share storage with Safari. To carry the device ID across, each page links to `/manifest.webmanifest?mark=<id>` (manifests are fetched without cookies), and the manifest's `start_url` is `/my-corpses?mark=<id>`. On its first standalone launch the installed app adopts that mark, then strips it from the URL. Normal browser tabs ignore the parameter. If the mark doesn't make it across, **My Corpses** still lets you copy it by hand and adopt it in the installed app.
 
 Notifications are sent when:
 
@@ -196,7 +196,7 @@ src/
     server/            D1 access, Web Push, notifications, reminders (shared with the cron Worker)
     image.ts           client-side encoding, cropping, bleaching, assembly
   routes/              pages and API routes
-static/                manifest and icons
+static/                icons
 workers/cron/          hourly reminder and expiry Worker
 wrangler.toml          Pages config: D1, R2, vars
 ```
