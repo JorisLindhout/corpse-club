@@ -9,12 +9,12 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 
 [vars]
 VAPID_PUBLIC_KEY = "BMs-57KUdOzOVmiL5USCsvEU-70suTwET5hKrH199jjx8HYcJ-hV10Ab1y5de-k-6VoJb1L8qvgTcU6FsZdvagY"
-VAPID_SUBJECT = "mailto:summon@corpse.club"
+VAPID_SUBJECT = "https://corpse-club.pages.dev"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "corpse-club"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d5a170ec-974c-4af7-a5bc-21aef1a52cf5"
 migrations_dir = "migrations"
 
 [[r2_buckets]]
