@@ -106,16 +106,16 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 ### The flow
 
 1. **Summon** (`POST /create`): creates a corpse and three sections, each with its own `crypto.randomUUID()` invite token, then redirects the creator to `/draw/<token-1>`.
-2. **Draw**: on paper with the camera (primary), on screen (fallback), or by uploading a photo.
-3. **Seal** (`POST /api/draw/[token]/submit`): uploads the section and, for sections I and II, a separate image of just its bottom strip. The creator gets the next invite link and the native share sheet.
-4. **Pass on**: the next hand opens the link and sees only the strip. When they seal, the creator is summoned to invite the last hand.
+2. **Draw**: on paper with the camera (primary) or on screen (fallback). There is no photo upload: only the live camera overlay and the on-screen canvas show the previous edge while drawing, so lines can meet.
+3. **Seal** (`POST /api/draw/[token]/submit`): uploads the section and, for sections I and II, a separate image of just its bottom strip. Whoever sealed it gets the next invite link and the native share sheet.
+4. **Pass on**: the next hand opens the link and sees only the strip. When they seal, they get the last invite link and pass it on, like the folded paper.
 5. **Reveal**: when section III is sealed, every subscribed participant is summoned to `/c/<id>`.
 
 ### Secrecy
 
 - The next hand never receives the full previous section, only the strip image uploaded alongside it (`corpses/{id}/section-{n}-overlap.webp`), served by `/api/draw/[token]/overlap` while that token is open.
 - Full section images are served only once the corpse is complete, or to the device that drew them.
-- Invite tokens are returned only to the creator's device. Responses set `Referrer-Policy: no-referrer` so tokens don't leak through links.
+- An invite token is returned only to the hand that sealed the section before it, and to the creator's device. Responses set `Referrer-Policy: no-referrer` so tokens don't leak through links.
 - Push endpoints are never returned by any API.
 
 ### Images
@@ -139,10 +139,11 @@ Permission is requested only after a section is sealed, in response to a tap ("S
 
 Notifications are sent when:
 
-- a section is sealed: to the creator ("Section II is drawn. Invite the last hand.")
 - the corpse is complete: to all subscribed participants
-- a reminder is due: to the creator, 48 hours after a section becomes drawable and again 24 hours later
-- a corpse expires: to the creator, 24 hours after the second reminder
+- a reminder is due: to the creator and the previous hand, 48 hours after a section becomes drawable and again 24 hours later
+- a corpse expires: to the creator and the previous hand, 24 hours after the second reminder
+
+Turns never depend on push: each hand gets the next invite link the moment they seal.
 
 ### Data model
 
@@ -155,18 +156,18 @@ There are also indexes for lookups by device and active sections, and a unique `
 
 ## API
 
-| Method | Route                                 | Description                                                     |
-| ------ | ------------------------------------- | --------------------------------------------------------------- |
-| POST   | `/api/corpse`                         | Create a corpse; returns `corpseId` and the section I `drawUrl` |
-| GET    | `/api/corpse/[id]`                    | Status and metadata (the invite path only for the creator)      |
-| GET    | `/api/corpse/[id]/image`              | Assembled image (stored WebP, or an on-the-fly SVG stack)       |
-| POST   | `/api/corpse/[id]/image`              | Participant uploads the composited image (once)                 |
-| GET    | `/api/corpse/[id]/section/[position]` | One section image (after completion, or to its own drawer)      |
-| GET    | `/api/draw/[token]`                   | Section info and draw state for an invite token                 |
-| GET    | `/api/draw/[token]/overlap`           | The previous section's strip, while the token is open           |
-| POST   | `/api/draw/[token]/submit`            | Seal a section (`image`, `overlap`, optional `name`)            |
-| POST   | `/api/push/subscribe`                 | Store a push subscription for a corpse                          |
-| GET    | `/api/my-corpses`                     | Corpses for the current device (cookie or `x-device-id`)        |
+| Method | Route                                 | Description                                                      |
+| ------ | ------------------------------------- | ---------------------------------------------------------------- |
+| POST   | `/api/corpse`                         | Create a corpse; returns `corpseId` and the section I `drawUrl`  |
+| GET    | `/api/corpse/[id]`                    | Status and metadata (invite path for the creator and prev. hand) |
+| GET    | `/api/corpse/[id]/image`              | Assembled image (stored WebP, or an on-the-fly SVG stack)        |
+| POST   | `/api/corpse/[id]/image`              | Participant uploads the composited image (once)                  |
+| GET    | `/api/corpse/[id]/section/[position]` | One section image (after completion, or to its own drawer)       |
+| GET    | `/api/draw/[token]`                   | Section info and draw state for an invite token                  |
+| GET    | `/api/draw/[token]/overlap`           | The previous section's strip, while the token is open            |
+| POST   | `/api/draw/[token]/submit`            | Seal a section (`image`, `overlap`, optional `name`)             |
+| POST   | `/api/push/subscribe`                 | Store a push subscription for a corpse                           |
+| GET    | `/api/my-corpses`                     | Corpses for the current device (cookie or `x-device-id`)         |
 
 ## Pages
 
@@ -176,7 +177,7 @@ There are also indexes for lookups by device and active sections, and a unique `
 | `/create`        | Creates a corpse (form POST) and starts section I                 |
 | `/draw/[token]`  | Drawing flow for one section                                      |
 | `/c/[id]`        | Reveal page and permalink (redirects to status while in progress) |
-| `/c/[id]/status` | Progress; the creator gets the current invite link here           |
+| `/c/[id]/status` | Progress; the creator and previous hand get the invite link here  |
 | `/my-corpses`    | Personal gallery and device mark                                  |
 | `/offline`       | Prerendered offline fallback used by the service worker           |
 

@@ -44,7 +44,7 @@ describe('drawState', () => {
 
 describe('corpseView', () => {
 	const sections = [
-		section(1, { status: 'complete', contributor_name: 'Joris' }),
+		section(1, { status: 'complete', contributor_name: 'Joris', device_id: 'first-hand' }),
 		section(2, { status: 'drawing' }),
 		section(3)
 	];
@@ -53,6 +53,11 @@ describe('corpseView', () => {
 		const view = corpseView({ corpse: corpse(), sections }, 'creator');
 		expect(view.invitePath).toBe('/draw/token-2');
 		expect(view.sections.map((s) => s.status)).toEqual(['complete', 'active', 'waiting']);
+	});
+
+	it('lets the previous hand pass the corpse on', () => {
+		const view = corpseView({ corpse: corpse(), sections }, 'first-hand');
+		expect(view.invitePath).toBe('/draw/token-2');
 	});
 
 	it('never leaks invite tokens to anyone else', () => {

@@ -1,5 +1,5 @@
 import { FIRST_REMINDER_AFTER, NEXT_REMINDER_AFTER, ROMAN } from '../constants';
-import { summon, type PushEnv } from './notify';
+import { summon, type PushEnv, type Summons } from './notify';
 
 interface StaleSection {
 	id: string;
@@ -9,6 +9,7 @@ interface StaleSection {
 	last_reminder_at: number | null;
 	activated_at: number;
 	creator_device_id: string | null;
+	previous_device_id: string | null;
 }
 
 export interface ReminderReport {
@@ -16,17 +17,27 @@ export interface ReminderReport {
 	expired: number;
 }
 
+/** The creator and the previous hand both hold the invite, so both are nudged. */
+async function nudge(env: PushEnv, section: StaleSection, message: Summons) {
+	const devices = new Set([section.creator_device_id, section.previous_device_id]);
+	for (const deviceId of devices) {
+		if (deviceId) await summon(env, section.corpse_id, message, { deviceId });
+	}
+}
+
 /**
- * Hourly sweep: nudges the creator 48h after a section becomes drawable,
- * again 24h later, and lays the corpse to rest 24h after that.
+ * Hourly sweep: nudges whoever holds the invite 48h after a section becomes
+ * drawable, again 24h later, and lays the corpse to rest 24h after that.
  */
 export async function runReminders(env: PushEnv, now = Date.now()): Promise<ReminderReport> {
 	const report: ReminderReport = { reminded: 0, expired: 0 };
 
 	const { results } = await env.DB.prepare(
 		`SELECT s.id, s.corpse_id, s.position, s.reminder_count, s.last_reminder_at, s.activated_at,
-		        c.creator_device_id
-		 FROM sections s JOIN corpses c ON c.id = s.corpse_id
+		        c.creator_device_id, p.device_id AS previous_device_id
+		 FROM sections s
+		 JOIN corpses c ON c.id = s.corpse_id
+		 LEFT JOIN sections p ON p.corpse_id = s.corpse_id AND p.position = s.position - 1
 		 WHERE c.status = 'in_progress'
 		   AND s.status IN ('pending', 'drawing')
 		   AND s.activated_at IS NOT NULL`
@@ -51,16 +62,11 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 				.run();
 			if (!expired.meta.changes) continue;
 			report.expired++;
-			await summon(
-				env,
-				section.corpse_id,
-				{
-					title: 'The corpse has rotted',
-					body: `No hand came for ${label}. It has been laid to rest.`,
-					url: statusUrl
-				},
-				{ deviceId: section.creator_device_id }
-			);
+			await nudge(env, section, {
+				title: 'The corpse has rotted',
+				body: `No hand came for ${label}. It has been laid to rest.`,
+				url: statusUrl
+			});
 			continue;
 		}
 
@@ -73,9 +79,9 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 		if (!claimed.meta.changes) continue;
 		report.reminded++;
 
-		await summon(
+		await nudge(
 			env,
-			section.corpse_id,
+			section,
 			count === 0
 				? {
 						title: 'The corpse grows cold',
@@ -86,8 +92,7 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 						title: 'Last rites',
 						body: `${label} must be drawn within a day, or the corpse rots.`,
 						url: statusUrl
-					},
-			{ deviceId: section.creator_device_id }
+					}
 		);
 	}
 

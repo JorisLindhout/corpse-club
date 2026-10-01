@@ -18,7 +18,6 @@
 		title,
 		oncapture,
 		onfallback,
-		onupload,
 		oncancel
 	}: {
 		overlapSrc: string | null;
@@ -26,7 +25,6 @@
 		title: string;
 		oncapture: (frame: HTMLCanvasElement, crop: Crop) => void;
 		onfallback: () => void;
-		onupload: () => void;
 		oncancel: () => void;
 	} = $props();
 
@@ -176,9 +174,7 @@
 	<footer>
 		{#if status === 'failed'}
 			<button class="btn solid block" type="button" onclick={onfallback}>Draw on screen</button>
-			<button class="btn block" type="button" onclick={onupload}>Upload a photo</button>
 		{:else}
-			<button class="btn ghost" type="button" onclick={onupload}>Upload</button>
 			<button
 				class="shutter"
 				type="button"
@@ -186,7 +182,7 @@
 				disabled={status !== 'live'}
 				aria-label="Capture"
 			></button>
-			<button class="btn ghost" type="button" onclick={onfallback}>Screen</button>
+			<button class="btn ghost screen" type="button" onclick={onfallback}>Screen</button>
 		{/if}
 	</footer>
 </div>
@@ -299,9 +295,9 @@
 	footer {
 		position: absolute;
 		inset: auto 0 0;
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
-		justify-content: space-between;
 		gap: 0.75rem;
 		padding: 1.25rem var(--pad) calc(1.25rem + var(--safe-bottom));
 		background: var(--black);
@@ -309,10 +305,15 @@
 	}
 
 	footer:has(.block) {
-		flex-direction: column;
+		grid-template-columns: 1fr;
+	}
+
+	.screen {
+		justify-self: end;
 	}
 
 	.shutter {
+		grid-column: 2;
 		width: 4.5rem;
 		height: 4.5rem;
 		padding: 0;

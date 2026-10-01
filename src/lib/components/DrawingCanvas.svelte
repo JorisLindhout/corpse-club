@@ -26,12 +26,13 @@
 		{ id: 'medium', width: 10, dot: 9 },
 		{ id: 'large', width: 24, dot: 15 }
 	];
+	// Traditional drawing media, as a surrealist might have had on the table.
 	const PALETTE = [
-		{ name: 'Ink', value: '#111111' },
-		{ name: 'Blood', value: '#8b0000' },
-		{ name: 'Bruise', value: '#2e3566' },
-		{ name: 'Bile', value: '#5f6b22' },
-		{ name: 'Ash', value: '#8a8a8a' }
+		{ name: 'India ink', value: '#161412' },
+		{ name: 'Sanguine', value: '#b5452f' },
+		{ name: 'Prussian blue', value: '#1d3f6e' },
+		{ name: 'Sepia', value: '#6f4a2a' },
+		{ name: 'Ochre', value: '#c8902e' }
 	];
 
 	interface Stroke {
@@ -58,6 +59,7 @@
 	let erasing = $state(false);
 	let undoable = $state(0);
 	let touched = $state(false);
+	let custom = $derived(!PALETTE.some((swatch) => swatch.value === color));
 	let wrapWidth = $state(0);
 	let wrapHeight = $state(0);
 
@@ -118,10 +120,10 @@
 		];
 	}
 
-	function down(e: PointerEvent) {
+	function down(e: PointerEvent & { currentTarget: HTMLElement }) {
 		if (activePointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
 		activePointer = e.pointerId;
-		canvas.setPointerCapture(e.pointerId);
+		e.currentTarget.setPointerCapture(e.pointerId);
 		[smoothX, smoothY] = toCanvas(e);
 		current = {
 			color: erasing ? PAPER : color,
@@ -186,20 +188,22 @@
 	</header>
 
 	<div class="wrap" bind:clientWidth={wrapWidth} bind:clientHeight={wrapHeight}>
-		<div class="sheet" style:width="{sheetWidth}px">
+		<!-- Strokes may start on the previous hand's strip; ink is clipped at the paper's edge. -->
+		<div
+			class="sheet"
+			role="application"
+			aria-label="Drawing paper"
+			style:width="{sheetWidth}px"
+			onpointerdown={down}
+			onpointermove={move}
+			onpointerup={up}
+			onpointercancel={up}
+		>
 			{#if overlapSrc}
 				<OverlapStrip src={overlapSrc} label="" />
 			{/if}
 			<div class="paper">
-				<canvas
-					bind:this={canvas}
-					width={SECTION_WIDTH}
-					height={SECTION_HEIGHT}
-					onpointerdown={down}
-					onpointermove={move}
-					onpointerup={up}
-					onpointercancel={up}
-				></canvas>
+				<canvas bind:this={canvas} width={SECTION_WIDTH} height={SECTION_HEIGHT}></canvas>
 				{#if !isLast}
 					<div class="zone" style:height="{(OVERLAP_HEIGHT / SECTION_HEIGHT) * 100}%">
 						<span>Seen by the next hand</span>
@@ -250,7 +254,11 @@
 					}}
 				></button>
 			{/each}
-			<label class="tool swatch custom">
+			<label
+				class="tool swatch custom"
+				class:chosen={custom && !erasing}
+				style:--swatch={custom ? color : undefined}
+			>
 				<span class="sr-only">Pick any colour</span>
 				<input
 					type="color"
@@ -264,7 +272,7 @@
 		</div>
 
 		<button class="btn solid block" type="button" onclick={finish} disabled={!touched}>
-			Seal this section
+			Lay down the pen
 		</button>
 	</footer>
 </div>
@@ -298,10 +306,16 @@
 
 	.sheet {
 		display: grid;
+		touch-action: none;
+		cursor: crosshair;
 	}
 
 	.sheet :global(figcaption) {
 		display: none;
+	}
+
+	.sheet :global(img) {
+		pointer-events: none;
 	}
 
 	.paper {
@@ -312,8 +326,6 @@
 		display: block;
 		width: 100%;
 		height: auto;
-		touch-action: none;
-		cursor: crosshair;
 	}
 
 	.zone {
@@ -337,37 +349,56 @@
 
 	footer {
 		display: grid;
-		gap: 0.75rem;
-		padding: 0.75rem var(--pad) 1rem;
-		border-top: var(--line);
+		gap: 0.5rem;
+		padding: 0.5rem var(--pad) 1rem;
+		border-top: 1px solid #1a1a1a;
 	}
 
 	.tools {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.25rem;
 		justify-content: center;
 	}
 
 	.tool {
+		position: relative;
 		display: grid;
 		place-items: center;
 		width: 2.75rem;
 		height: 2.75rem;
 		padding: 0;
-		border: 1px solid #333;
+		border: 0;
+		border-radius: 50%;
 		background: transparent;
-		color: var(--bone);
+		color: var(--gray);
 		cursor: pointer;
+		transition: color 120ms linear;
 	}
 
+	.tool:hover,
 	.tool[aria-pressed='true'] {
-		border-color: var(--bone);
-		background: #1a1a1a;
+		color: var(--bone);
+	}
+
+	/* Selection ring, drawn outside the swatch so the colour itself stays untouched. */
+	.tool::after {
+		content: '';
+		position: absolute;
+		inset: 0.2rem;
+		border-radius: 50%;
+		box-shadow: 0 0 0 1px var(--bone);
+		opacity: 0;
+		transition: opacity 120ms linear;
+	}
+
+	.tool[aria-pressed='true']::after,
+	.tool.chosen::after {
+		opacity: 1;
 	}
 
 	.tool svg {
-		width: 1.3rem;
-		height: 1.3rem;
+		width: 1.2rem;
+		height: 1.2rem;
 		fill: none;
 		stroke: currentColor;
 		stroke-width: 1.25;
@@ -376,29 +407,20 @@
 	.dot {
 		display: block;
 		border-radius: 50%;
-		background: var(--bone);
+		background: currentColor;
 	}
 
-	.swatch {
-		position: relative;
+	.swatch::before {
+		content: '';
+		width: 1.6rem;
+		height: 1.6rem;
+		border-radius: 50%;
 		background: var(--swatch);
-	}
-
-	.swatch[aria-pressed='true'] {
-		background: var(--swatch);
-		outline: 1px solid var(--bone);
-		outline-offset: 3px;
-	}
-
-	.custom {
-		background: transparent;
+		box-shadow: inset 0 0 0 1px rgb(240 237 230 / 0.18);
 	}
 
 	.custom::before {
-		content: '+';
-		font-size: 1.4rem;
-		font-weight: 300;
-		line-height: 1;
+		background: var(--swatch, conic-gradient(#b5452f, #c8902e, #5f7a3a, #1d3f6e, #6b3f6e, #b5452f));
 	}
 
 	.custom input {

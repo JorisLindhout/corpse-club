@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { ROMAN, SECTION_COUNT, isUuid } from '$lib/constants';
+import { SECTION_COUNT, isUuid } from '$lib/constants';
 import { completeSection, drawState, getByToken } from '$lib/server/repo';
 import { getEnv, overlapKey, rateLimit, readImage, sanitizeName } from '$lib/server/http';
 import { summon } from '$lib/server/notify';
@@ -55,39 +55,22 @@ export const POST: RequestHandler = async (event) => {
 		else await assembling;
 	}
 
-	const notifications = corpseComplete
-		? summon(env, corpse.id, {
-				title: 'The corpse is complete',
-				body: 'Three hands. One creature. Come and look.',
-				url: `/c/${corpse.id}`
-			})
-		: corpse.creator_device_id !== deviceId
-			? summon(
-					env,
-					corpse.id,
-					{
-						title: `Section ${ROMAN[section.position - 1]} is drawn`,
-						body:
-							section.position + 1 === SECTION_COUNT
-								? 'Invite the last hand.'
-								: 'Invite the next hand.',
-						url: `/c/${corpse.id}/status`
-					},
-					{ deviceId: corpse.creator_device_id }
-				)
-			: null;
-	if (notifications) {
-		const settled = notifications.catch((e) => console.error('push failed', e));
+	if (corpseComplete) {
+		const settled = summon(env, corpse.id, {
+			title: 'The corpse is complete',
+			body: 'Three hands. One creature. Come and look.',
+			url: `/c/${corpse.id}`
+		}).catch((e) => console.error('push failed', e));
 		if (ctx) ctx.waitUntil(settled);
 		else await settled;
 	}
 
+	// Like the folded paper, the corpse passes from hand to hand.
 	const next = sections.find((s) => s.position === section.position + 1);
 	return json({
 		corpseId: corpse.id,
 		position: section.position,
 		complete: corpseComplete,
-		nextInvitePath:
-			next && corpse.creator_device_id === deviceId ? `/draw/${next.invite_token}` : null
+		nextInvitePath: next ? `/draw/${next.invite_token}` : null
 	});
 };

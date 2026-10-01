@@ -20,13 +20,19 @@
 					{#if slot.status === 'complete'}
 						Drawn by {slot.name ?? 'an anonymous hand'}
 					{:else if slot.status === 'active'}
-						{#if expired}Abandoned{:else}<span class="pulse">Awaiting a hand</span>{/if}
+						{expired ? 'Abandoned' : 'Awaiting a hand'}
 					{:else}
-						Sealed
+						Waits its turn
 					{/if}
 				</span>
 			</span>
-			<span class="mark" aria-hidden="true"></span>
+			{#if slot.status === 'complete'}
+				<svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
+					<path d="M2.5 8.5 L6.5 12.5 L13.5 3.5" />
+				</svg>
+			{:else}
+				<span class="mark" aria-hidden="true"></span>
+			{/if}
 		</li>
 	{/each}
 </ol>
@@ -36,19 +42,18 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		border: var(--line);
 	}
 
 	li {
 		display: grid;
-		grid-template-columns: 3rem 1fr 1.25rem;
+		grid-template-columns: 2.5rem 1fr 1.25rem;
 		align-items: center;
 		gap: 1rem;
-		padding: 1.1rem 1.25rem;
+		padding: 1rem 0;
 	}
 
 	li + li {
-		border-top: 1px dashed var(--gray);
+		border-top: 1px solid #1a1a1a;
 	}
 
 	.numeral {
@@ -75,8 +80,15 @@
 		border: var(--line);
 	}
 
-	.complete .mark {
-		background: var(--bone);
+	svg.mark {
+		width: 1.25rem;
+		height: 1.25rem;
+		border: 0;
+		fill: none;
+		stroke: var(--bone);
+		stroke-width: 1.75;
+		stroke-linecap: round;
+		stroke-linejoin: round;
 	}
 
 	.active .numeral,

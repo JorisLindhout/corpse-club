@@ -36,7 +36,7 @@
 		<p class="muted">No hand came in time.</p>
 	{:else}
 		<p class="label">A corpse in progress</p>
-		<h2>Awaiting the next hand...</h2>
+		<h2>The corpse grows</h2>
 	{/if}
 
 	<SectionSlots sections={corpse.sections} {expired} />
@@ -60,17 +60,15 @@
 					]} of a corpse. You will see only the edge of what came before."
 				/>
 			</div>
-		{:else if !corpse.isCreator}
-			<p class="muted">The one who summoned this corpse holds the next invitation.</p>
+		{:else}
+			<p class="muted">The previous hand holds the next invitation.</p>
 		{/if}
 
 		<PushPrompt
 			corpseId={corpse.id}
 			vapidPublicKey={data.vapidPublicKey}
 			deviceId={data.deviceId}
-			reason={corpse.isCreator
-				? 'Be summoned when each section is drawn.'
-				: 'Be summoned when the corpse is complete.'}
+			reason="Be summoned when the corpse is complete."
 		/>
 	{:else}
 		<form method="POST" action="/create">

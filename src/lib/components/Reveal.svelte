@@ -146,7 +146,6 @@
 		padding: var(--pad);
 		text-align: center;
 		background: var(--black);
-		border: var(--line);
 		min-height: 60vh;
 	}
 

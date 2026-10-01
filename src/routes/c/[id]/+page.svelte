@@ -155,7 +155,6 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		border-top: var(--line);
 	}
 
 	.hands li {
@@ -163,7 +162,10 @@
 		grid-template-columns: 2.5rem 1fr;
 		align-items: baseline;
 		padding: 0.75rem 0;
-		border-bottom: 1px dashed #333;
+	}
+
+	.hands li + li {
+		border-top: 1px solid #1a1a1a;
 	}
 
 	.numeral {

@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { MAX_NAME_LENGTH, ROMAN, SECTION_COUNT, SECTION_LABELS } from '$lib/constants';
-	import { cropOverlap, createCanvas, encodeCanvas } from '$lib/image';
+	import { MAX_NAME_LENGTH, ROMAN, SECTION_LABELS } from '$lib/constants';
+	import { randomDemon } from '$lib/demons';
+	import { cropOverlap, encodeCanvas } from '$lib/image';
 	import CameraCapture, { type Crop } from '$lib/components/CameraCapture.svelte';
 	import DrawingCanvas from '$lib/components/DrawingCanvas.svelte';
 	import ImageAdjust from '$lib/components/ImageAdjust.svelte';
@@ -14,23 +15,27 @@
 	let { data } = $props();
 
 	const NAME_KEY = 'cc_name';
+	const ORDINALS = ['first', 'second', 'third'];
 
 	type Step = 'intro' | 'camera' | 'canvas' | 'adjust' | 'review' | 'sending' | 'sealed';
+	type Tool = 'canvas' | 'adjust';
 	let step = $state<Step>('intro');
 	let name = $state('');
 	let capture = $state.raw<{ frame: HTMLCanvasElement; crop: Crop } | null>(null);
 	let section = $state.raw<HTMLCanvasElement | null>(null);
+	let drawnWith = $state<Tool>('canvas');
 	let previewUrl = $state<string | null>(null);
 	let failure = $state<string | null>(null);
 	let nextInvitePath = $state<string | null>(null);
-	let fileInput: HTMLInputElement;
 
 	let numeral = $derived(ROMAN[data.position - 1]);
 	let part = $derived(SECTION_LABELS[data.position - 1]);
 	let title = $derived(`${numeral}. ${part}`);
+	let partLabel = $derived(`${part} · the ${ORDINALS[data.position - 1]} of three parts`);
+	let reviewing = $derived(step === 'review' || step === 'sending');
 
 	onMount(() => {
-		name = localStorage.getItem(NAME_KEY) ?? '';
+		name = localStorage.getItem(NAME_KEY) ?? randomDemon();
 	});
 
 	function open(next: Step) {
@@ -38,31 +43,9 @@
 		step = next;
 	}
 
-	function chooseFile() {
-		fileInput.value = '';
-		fileInput.click();
-	}
-
-	async function fileChosen(e: Event & { currentTarget: HTMLInputElement }) {
-		const file = e.currentTarget.files?.[0];
-		if (!file) return;
-		try {
-			const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-			const frame = createCanvas(bitmap.width, bitmap.height);
-			frame.getContext('2d')!.drawImage(bitmap, 0, 0);
-			bitmap.close();
-			const ratio = 3 / 4;
-			const w = Math.min(frame.width, frame.height / ratio);
-			const h = w * ratio;
-			capture = { frame, crop: { x: (frame.width - w) / 2, y: (frame.height - h) / 2, w, h } };
-			open('adjust');
-		} catch {
-			failure = 'That image could not be read.';
-		}
-	}
-
-	function review(canvas: HTMLCanvasElement) {
+	function review(canvas: HTMLCanvasElement, tool: Tool) {
 		section = canvas;
+		drawnWith = tool;
 		previewUrl = canvas.toDataURL('image/jpeg', 0.8);
 		open('review');
 	}
@@ -79,11 +62,9 @@
 				const overlap = await encodeCanvas(cropOverlap(section), 0.9);
 				form.append('overlap', overlap, `overlap.${overlap.type.split('/')[1]}`);
 			}
-			const cleanName = name.trim();
-			if (cleanName) {
-				form.append('name', cleanName);
-				localStorage.setItem(NAME_KEY, cleanName);
-			}
+			const cleanName = name.trim() || randomDemon();
+			form.append('name', cleanName);
+			localStorage.setItem(NAME_KEY, cleanName);
 
 			const response = await fetch(`/api/draw/${data.token}/submit`, {
 				method: 'POST',
@@ -91,7 +72,7 @@
 			});
 			if (!response.ok) {
 				const body = (await response.json().catch(() => null)) as { message?: string } | null;
-				throw new Error(body?.message ?? 'The seal would not hold.');
+				throw new Error(body?.message ?? 'The fold would not hold.');
 			}
 			const result: { complete: boolean; nextInvitePath: string | null } = await response.json();
 			if (result.complete) {
@@ -101,7 +82,7 @@
 			nextInvitePath = result.nextInvitePath;
 			step = 'sealed';
 		} catch (e) {
-			failure = e instanceof Error ? e.message : 'The seal would not hold.';
+			failure = e instanceof Error ? e.message : 'The fold would not hold.';
 			step = 'review';
 		}
 	}
@@ -110,16 +91,6 @@
 <svelte:head>
 	<title>{title} · Corpse Club</title>
 </svelte:head>
-
-<input
-	bind:this={fileInput}
-	class="sr-only"
-	type="file"
-	accept="image/*"
-	tabindex="-1"
-	aria-hidden="true"
-	onchange={fileChosen}
-/>
 
 {#if step === 'camera'}
 	<CameraCapture
@@ -131,27 +102,39 @@
 			open('adjust');
 		}}
 		onfallback={() => open('canvas')}
-		onupload={chooseFile}
 		oncancel={() => open('intro')}
 	/>
-{:else if step === 'canvas'}
-	<DrawingCanvas
-		overlapSrc={data.overlapUrl}
-		isLast={data.isLast}
-		{title}
-		ondone={review}
-		oncancel={() => open('intro')}
-	/>
-{:else if step === 'adjust' && capture}
-	<ImageAdjust
-		source={capture.frame}
-		crop={capture.crop}
-		isLast={data.isLast}
-		{title}
-		ondone={review}
-		onretake={() => open('camera')}
-	/>
-{:else}
+{/if}
+
+<!-- Kept mounted, hidden, while reviewing so the hand can return to the same page. -->
+{#if step === 'canvas' || (reviewing && drawnWith === 'canvas')}
+	<div hidden={step !== 'canvas'}>
+		<DrawingCanvas
+			overlapSrc={data.overlapUrl}
+			isLast={data.isLast}
+			{title}
+			ondone={(canvas) => review(canvas, 'canvas')}
+			oncancel={() => open('intro')}
+		/>
+	</div>
+{/if}
+
+{#if capture && (step === 'adjust' || (reviewing && drawnWith === 'adjust'))}
+	{#key capture}
+		<div hidden={step !== 'adjust'}>
+			<ImageAdjust
+				source={capture.frame}
+				crop={capture.crop}
+				isLast={data.isLast}
+				{title}
+				ondone={(canvas) => review(canvas, 'adjust')}
+				onretake={() => open('camera')}
+			/>
+		</div>
+	{/key}
+{/if}
+
+{#if step !== 'camera' && step !== 'canvas' && step !== 'adjust'}
 	<div class="page">
 		<header class="top">
 			<a href={resolve('/')} class="wordmark">Corpse Club</a>
@@ -164,16 +147,16 @@
 				<p class="muted">No hand came in time. It has been laid to rest.</p>
 				<a class="btn solid block" href={resolve('/')}>Summon another</a>
 			{:else if data.state === 'complete' && step !== 'sealed'}
-				<p class="label">Section {numeral}</p>
+				<p class="label">{partLabel}</p>
 				<h2>Already drawn</h2>
-				<p class="muted">Another hand has sealed this section.</p>
+				<p class="muted">Another hand has already drawn this part.</p>
 				<a class="btn block" href={resolve('/c/[id]', { id: data.corpseId })}>See the corpse</a>
 			{:else if data.state === 'locked'}
-				<p class="label">Section {numeral}</p>
+				<p class="label">{partLabel}</p>
 				<h2>Not yet</h2>
 				<p class="muted">The previous hand is still drawing. Return when you are summoned.</p>
 			{:else if step === 'sealed'}
-				<p class="label">Section {numeral} of {ROMAN[SECTION_COUNT - 1]}</p>
+				<p class="label">{partLabel}</p>
 				<h2>{part} is drawn</h2>
 				{#if nextInvitePath}
 					<p>Pass the corpse on. Send this link to the next hand. They will see only the edge.</p>
@@ -181,47 +164,47 @@
 						path={nextInvitePath}
 						text="Draw the next part of a corpse. You will see only the edge of what came before."
 					/>
-					<PushPrompt
-						corpseId={data.corpseId}
-						vapidPublicKey={data.vapidPublicKey}
-						deviceId={data.deviceId}
-						reason="Be summoned when the next hand is done."
-					/>
-					<a class="btn ghost block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
-						Watch over the corpse
-					</a>
-				{:else}
-					<p class="pulse">Awaiting the next hand...</p>
-					<PushPrompt
-						corpseId={data.corpseId}
-						vapidPublicKey={data.vapidPublicKey}
-						deviceId={data.deviceId}
-						reason="Be summoned when the corpse is complete."
-					/>
-					<a class="btn ghost block" href={resolve('/my-corpses')}>My corpses</a>
 				{/if}
-			{:else if step === 'review' || step === 'sending'}
-				<p class="label">Section {numeral} · {part}</p>
-				<h2>Seal it?</h2>
+				<PushPrompt
+					corpseId={data.corpseId}
+					vapidPublicKey={data.vapidPublicKey}
+					deviceId={data.deviceId}
+					reason="Be summoned when the corpse is complete."
+				/>
+				<a class="btn ghost block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
+					Watch over the corpse
+				</a>
+			{:else if reviewing}
+				<p class="label">{partLabel}</p>
+				<h2>{data.isLast ? 'Unfold the corpse?' : 'Fold the paper?'}</h2>
 				{#if previewUrl}
 					<img class="preview" src={previewUrl} alt="Your section" />
 				{/if}
+				<p class="muted">
+					{data.isLast
+						? 'Yours is the last hand. Unfolding reveals the whole creature to all three.'
+						: 'Once folded, the next hand sees only the strip below the red line. There is no going back.'}
+				</p>
 				{#if failure}
 					<p class="blood" role="alert">{failure}</p>
 				{/if}
 				<button class="btn solid block" type="button" onclick={seal} disabled={step === 'sending'}>
-					{#if step === 'sending'}<span class="pulse">Sealing...</span>{:else}Seal it{/if}
+					{#if step === 'sending'}
+						<span class="pulse">{data.isLast ? 'Unfolding...' : 'Folding...'}</span>
+					{:else}
+						{data.isLast ? 'Unfold it' : 'Fold it'}
+					{/if}
 				</button>
 				<button
 					class="btn ghost block"
 					type="button"
-					onclick={() => open('intro')}
+					onclick={() => open(drawnWith)}
 					disabled={step === 'sending'}
 				>
-					Start over
+					{drawnWith === 'canvas' ? 'Keep drawing' : 'Adjust the photo'}
 				</button>
 			{:else}
-				<p class="label">Section {numeral} of {ROMAN[SECTION_COUNT - 1]}</p>
+				<p class="label">{partLabel}</p>
 				<h2>{data.position === 1 ? 'Your turn to draw' : 'You have been summoned'}</h2>
 
 				{#if data.overlapUrl}
@@ -248,7 +231,7 @@
 						type="text"
 						bind:value={name}
 						maxlength={MAX_NAME_LENGTH}
-						placeholder="Anonymous"
+						placeholder="Your name, or a demon's"
 						autocomplete="nickname"
 					/>
 				</label>
@@ -263,9 +246,6 @@
 					</button>
 					<button class="btn block" type="button" onclick={() => open('canvas')}>
 						Draw on screen
-					</button>
-					<button class="btn ghost block" type="button" onclick={chooseFile}>
-						Upload a photo
 					</button>
 				</div>
 			{/if}
@@ -313,7 +293,6 @@
 	.preview {
 		display: block;
 		width: 100%;
-		border: var(--line);
 	}
 
 	.actions {

@@ -56,21 +56,12 @@
 	</header>
 
 	{#if data.corpses.length === 0}
-		<div class="empty">
-			<svg viewBox="0 0 120 120" aria-hidden="true">
-				<path d="M20 30 L100 30 M20 60 L100 60 M20 90 L100 90" />
-				<path d="M45 18 C40 40 70 50 60 75 C52 95 75 100 70 112" />
-			</svg>
-			<p>No corpses yet. The ritual awaits.</p>
-			<form method="POST" action="/create">
-				<button class="btn solid block" type="submit">Summon a corpse</button>
-			</form>
-		</div>
+		<p class="muted">No corpses yet. Summon one, or wait to be summoned.</p>
 	{:else}
 		<ul class="grid">
 			{#each data.corpses as corpse (corpse.id)}
 				<li>
-					<a class="card {corpse.status}" href={resolve('/c/[id]', { id: corpse.id })}>
+					<a class="tile {corpse.status}" href={resolve('/c/[id]', { id: corpse.id })}>
 						<div
 							class="thumb"
 							style:aspect-ratio="{SECTION_WIDTH} / {SECTION_HEIGHT * SECTION_COUNT}"
@@ -138,26 +129,6 @@
 		gap: 0.75rem;
 	}
 
-	.empty {
-		display: grid;
-		gap: 1.5rem;
-		justify-items: center;
-		text-align: center;
-		padding: 2rem 0;
-	}
-
-	.empty svg {
-		width: 7rem;
-		fill: none;
-		stroke: var(--gray);
-		stroke-width: 1.25;
-		stroke-dasharray: 4 3;
-	}
-
-	.empty form {
-		width: 100%;
-	}
-
 	.grid {
 		list-style: none;
 		margin: 0;
@@ -167,18 +138,20 @@
 		gap: 1rem;
 	}
 
-	.card {
+	.tile {
 		display: grid;
 		gap: 0.75rem;
-		padding: 0.6rem;
-		border: var(--line);
+		align-content: start;
 		text-decoration: none;
 		height: 100%;
-		transition: background-color 120ms linear;
 	}
 
-	.card:hover {
-		background: #111;
+	.tile .thumb {
+		transition: opacity 120ms linear;
+	}
+
+	.tile:not(.expired):hover .thumb {
+		opacity: 0.8;
 	}
 
 	.thumb {
