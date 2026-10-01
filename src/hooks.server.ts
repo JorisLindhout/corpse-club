@@ -22,8 +22,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.deviceId = deviceId;
 
 	const response = await resolve(event);
-	// Invite tokens live in URLs; never leak them through Referer.
-	response.headers.set('referrer-policy', 'no-referrer');
+	// Invite tokens live in URLs; never leak them to other sites through Referer.
+	// Not `no-referrer`: browsers then send `Origin: null` on form posts, which
+	// SvelteKit's CSRF check rejects.
+	response.headers.set('referrer-policy', 'same-origin');
 	response.headers.set('x-content-type-options', 'nosniff');
 	response.headers.set('x-frame-options', 'DENY');
 	response.headers.set('permissions-policy', 'camera=(self), microphone=(), geolocation=()');
