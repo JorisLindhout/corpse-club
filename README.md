@@ -135,11 +135,15 @@ On first visit the server sets a random device ID cookie (`cc_device`), which th
 
 ### Push and iOS
 
-Permission is requested only after a section is sealed, in response to a tap ("Summon me"). Subscriptions are stored per corpse and device. On iOS, Web Push only works for Home Screen apps, so on iOS Safari the prompt explains how to install. Home Screen apps on iOS don't share storage with Safari. To carry the device ID across, each page links to `/manifest.webmanifest?mark=<id>` (manifests are fetched without cookies), and the manifest's `start_url` is `/my-corpses?mark=<id>`. On its first standalone launch the installed app adopts that mark, then strips it from the URL. Normal browser tabs ignore the parameter. If the mark doesn't make it across, **My Corpses** still lets you copy it by hand and adopt it in the installed app.
+Permission is requested only after a section is sealed, in response to a tap ("Summon me"). Subscriptions belong to the device, not the corpse: one "Summon me" covers every corpse the device creates or draws in. Each endpoint is stored once and follows whichever mark registered it last, so adopting a mark re-registers the browser's subscription.
+
+On iOS, Web Push only works for Home Screen apps (iOS 16.4 and later). An iPhone hand in a browser tab whose device has no subscription yet is asked to add Corpse Club to the Home Screen before drawing, with steps for their browser (Safari, Chrome, or a generic menu). "Draw without summons" skips this. Once any browser on the device has subscribed, for example the installed app, the gate and the prompt stand aside, because summons already reach that device. Embedded browsers of social apps (Instagram, Facebook, TikTok and others) can neither install nor receive push, so they are told to open the page in Safari or the system browser first.
+
+Home Screen apps on iOS don't share storage with Safari. To carry the device ID across, each page links to `/manifest.webmanifest?mark=<id>&next=<path>` (manifests are fetched without cookies), and the manifest's `start_url` is `/my-corpses?mark=<id>&next=<path>`. `next` is the draw, status or reveal page the app was added from. On its first standalone launch the installed app adopts the mark and opens `next`; later launches ignore both and strip them from the URL. Normal browser tabs ignore the parameters. If the mark doesn't make it across, **My Corpses** still lets you copy it by hand and adopt it in the installed app.
 
 Notifications are sent when:
 
-- the corpse is complete: to all subscribed participants
+- the corpse is complete: to every participant who has subscribed, except the hand who just unfolded it
 - a reminder is due: to the creator and the previous hand, 48 hours after a section becomes drawable and again 24 hours later
 - a corpse expires: to the creator and the previous hand, 24 hours after the second reminder
 
@@ -152,7 +156,9 @@ Turns never depend on push: each hand gets the next invite link the moment they 
 - `sections.activated_at`: when a section became drawable (corpse creation for section I, the previous section's completion otherwise). Reminder timing is measured from this, since sections have no `created_at`.
 - `rate_limits`: counters for the D1 rate limiter.
 
-There are also indexes for lookups by device and active sections, and a unique `(corpse_id, endpoint)` index on subscriptions.
+There are also indexes for lookups by device and active sections.
+
+`migrations/0002_device_subscriptions.sql` moves `push_subscriptions` from per corpse to per device: one row per endpoint (unique), keyed by `device_id`. Who gets summoned for a corpse is derived from `corpses.creator_device_id` and `sections.device_id`.
 
 ## API
 
@@ -166,7 +172,7 @@ There are also indexes for lookups by device and active sections, and a unique `
 | GET    | `/api/draw/[token]`                   | Section info and draw state for an invite token                  |
 | GET    | `/api/draw/[token]/overlap`           | The previous section's strip, while the token is open            |
 | POST   | `/api/draw/[token]/submit`            | Seal a section (`image`, `overlap`, optional `name`)             |
-| POST   | `/api/push/subscribe`                 | Store a push subscription for a corpse                           |
+| POST   | `/api/push/subscribe`                 | Store this device's push subscription                            |
 | GET    | `/api/my-corpses`                     | Corpses for the current device (cookie or `x-device-id`)         |
 
 ## Pages

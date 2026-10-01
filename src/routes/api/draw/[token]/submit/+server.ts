@@ -56,11 +56,16 @@ export const POST: RequestHandler = async (event) => {
 	}
 
 	if (corpseComplete) {
-		const settled = summon(env, corpse.id, {
-			title: 'The corpse is complete',
-			body: 'Three hands. One creature. Come and look.',
-			url: `/c/${corpse.id}`
-		}).catch((e) => console.error('push failed', e));
+		const settled = summon(
+			env,
+			corpse.id,
+			{
+				title: 'The corpse is complete',
+				body: 'Three hands. One creature. Come and look.',
+				url: `/c/${corpse.id}`
+			},
+			{ excludeDeviceId: deviceId }
+		).catch((e) => console.error('push failed', e));
 		if (ctx) ctx.waitUntil(settled);
 		else await settled;
 	}

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { SECTION_COUNT, SECTION_LABELS, isUuid } from '$lib/constants';
 import { DEFAULT_PREVIEW } from '$lib/seo';
-import { drawState, getByToken, markDrawing } from '$lib/server/repo';
+import { drawState, getByToken, isReachable, markDrawing } from '$lib/server/repo';
 import { getEnv } from '$lib/server/http';
 import type { PageServerLoad } from './$types';
 
@@ -13,6 +13,7 @@ export const load: PageServerLoad = async (event) => {
 	if (!found) error(404, 'This invitation leads nowhere');
 
 	const { corpse, sections, section } = found;
+	const { deviceId } = event.locals;
 	const state = drawState(corpse, sections, section);
 	if (state === 'open' && section.status === 'pending') await markDrawing(env.DB, section.id);
 
@@ -27,7 +28,9 @@ export const load: PageServerLoad = async (event) => {
 		corpseId: corpse.id,
 		position: section.position,
 		isLast: section.position === SECTION_COUNT,
-		isCreator: corpse.creator_device_id === event.locals.deviceId,
+		isCreator: corpse.creator_device_id === deviceId,
+		isMine: section.device_id === deviceId,
+		reachable: await isReachable(env.DB, deviceId),
 		state,
 		overlapUrl: state === 'open' && section.position > 1 ? `/api/draw/${token}/overlap` : null
 	};

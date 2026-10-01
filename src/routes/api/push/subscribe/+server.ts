@@ -1,6 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { isUuid } from '$lib/constants';
-import { getCorpse, saveSubscription } from '$lib/server/repo';
+import { saveSubscription } from '$lib/server/repo';
 import { getEnv, rateLimit } from '$lib/server/http';
 import { b64urlDecode } from '$lib/server/webpush';
 import type { RequestHandler } from './$types';
@@ -25,12 +24,10 @@ export const POST: RequestHandler = async (event) => {
 	} catch {
 		error(400, 'Malformed summons');
 	}
-	const { corpseId, subscription } = (body ?? {}) as {
-		corpseId?: unknown;
+	const { subscription } = (body ?? {}) as {
 		subscription?: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } };
 	};
 
-	if (!isUuid(corpseId)) error(400, 'Unknown corpse');
 	const endpoint = subscription?.endpoint;
 	if (typeof endpoint !== 'string' || endpoint.length > 2048) error(400, 'Invalid endpoint');
 	let url: URL;
@@ -45,12 +42,7 @@ export const POST: RequestHandler = async (event) => {
 	const auth = subscription?.keys?.auth;
 	if (decodedLength(p256dh) !== 65 || decodedLength(auth) !== 16) error(400, 'Invalid keys');
 
-	const env = getEnv(event);
-	const found = await getCorpse(env.DB, corpseId);
-	if (!found || found.corpse.status === 'expired') error(404, 'Unknown corpse');
-
-	await saveSubscription(env.DB, {
-		corpseId,
+	await saveSubscription(getEnv(event).DB, {
 		deviceId: event.locals.deviceId,
 		endpoint,
 		p256dh: p256dh as string,

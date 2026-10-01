@@ -219,16 +219,16 @@ export async function myCorpses(db: D1Database, deviceId: string): Promise<MyCor
 
 export interface SubscriptionRow {
 	id: string;
-	corpse_id: string;
-	device_id: string | null;
+	device_id: string;
 	endpoint: string;
 	keys_p256dh: string;
 	keys_auth: string;
 }
 
+/** An endpoint belongs to one browser, so it follows whichever mark registered it last. */
 export async function saveSubscription(
 	db: D1Database,
-	input: { corpseId: string; deviceId: string; endpoint: string; p256dh: string; auth: string }
+	input: { deviceId: string; endpoint: string; p256dh: string; auth: string }
 ): Promise<void> {
 	await db.batch([
 		db
@@ -236,16 +236,15 @@ export async function saveSubscription(
 			.bind(input.deviceId, Date.now()),
 		db
 			.prepare(
-				`INSERT INTO push_subscriptions (id, corpse_id, device_id, endpoint, keys_p256dh, keys_auth, created_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?)
-				 ON CONFLICT (corpse_id, endpoint) DO UPDATE SET
+				`INSERT INTO push_subscriptions (id, device_id, endpoint, keys_p256dh, keys_auth, created_at)
+				 VALUES (?, ?, ?, ?, ?, ?)
+				 ON CONFLICT (endpoint) DO UPDATE SET
 				   device_id = excluded.device_id,
 				   keys_p256dh = excluded.keys_p256dh,
 				   keys_auth = excluded.keys_auth`
 			)
 			.bind(
 				crypto.randomUUID(),
-				input.corpseId,
 				input.deviceId,
 				input.endpoint,
 				input.p256dh,
@@ -255,18 +254,41 @@ export async function saveSubscription(
 	]);
 }
 
-export async function subscriptionsFor(
+export async function deviceSubscriptions(
 	db: D1Database,
-	corpseId: string,
-	deviceId?: string | null
+	deviceId: string
 ): Promise<SubscriptionRow[]> {
-	const query = deviceId
-		? db
-				.prepare('SELECT * FROM push_subscriptions WHERE corpse_id = ? AND device_id = ?')
-				.bind(corpseId, deviceId)
-		: db.prepare('SELECT * FROM push_subscriptions WHERE corpse_id = ?').bind(corpseId);
-	const { results } = await query.all<SubscriptionRow>();
+	const { results } = await db
+		.prepare('SELECT * FROM push_subscriptions WHERE device_id = ?')
+		.bind(deviceId)
+		.all<SubscriptionRow>();
 	return results;
+}
+
+/** Subscriptions of every device that created or drew in the corpse. */
+export async function participantSubscriptions(
+	db: D1Database,
+	corpseId: string
+): Promise<SubscriptionRow[]> {
+	const { results } = await db
+		.prepare(
+			`SELECT * FROM push_subscriptions
+			 WHERE device_id IN (
+			   SELECT creator_device_id FROM corpses WHERE id = ?1
+			   UNION SELECT device_id FROM sections WHERE corpse_id = ?1
+			 )`
+		)
+		.bind(corpseId)
+		.all<SubscriptionRow>();
+	return results;
+}
+
+export async function isReachable(db: D1Database, deviceId: string): Promise<boolean> {
+	const row = await db
+		.prepare('SELECT 1 FROM push_subscriptions WHERE device_id = ? LIMIT 1')
+		.bind(deviceId)
+		.first();
+	return row !== null;
 }
 
 export async function deleteSubscription(db: D1Database, id: string): Promise<void> {

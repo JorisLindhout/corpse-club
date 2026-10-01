@@ -5,9 +5,11 @@
 	import { MAX_NAME_LENGTH, ROMAN, SECTION_LABELS } from '$lib/constants';
 	import { randomDemon } from '$lib/demons';
 	import { cropOverlap, encodeCanvas } from '$lib/image';
+	import { pushSupport } from '$lib/push';
 	import CameraCapture, { type Crop } from '$lib/components/CameraCapture.svelte';
 	import DrawingCanvas from '$lib/components/DrawingCanvas.svelte';
 	import ImageAdjust from '$lib/components/ImageAdjust.svelte';
+	import InstallGuide from '$lib/components/InstallGuide.svelte';
 	import OverlapStrip from '$lib/components/OverlapStrip.svelte';
 	import PushPrompt from '$lib/components/PushPrompt.svelte';
 	import ShareLink from '$lib/components/ShareLink.svelte';
@@ -27,6 +29,8 @@
 	let previewUrl = $state<string | null>(null);
 	let failure = $state<string | null>(null);
 	let nextInvitePath = $state<string | null>(null);
+	/** Hands that cannot be summoned where they are get sent home before they draw. */
+	let gate = $state<'checking' | 'ios-install' | 'in-app' | 'open'>('checking');
 
 	let numeral = $derived(ROMAN[data.position - 1]);
 	let part = $derived(SECTION_LABELS[data.position - 1]);
@@ -36,6 +40,9 @@
 
 	onMount(() => {
 		name = localStorage.getItem(NAME_KEY) ?? randomDemon();
+		const support = pushSupport();
+		gate =
+			!data.reachable && (support === 'ios-install' || support === 'in-app') ? support : 'open';
 	});
 
 	function open(next: Step) {
@@ -146,6 +153,13 @@
 				<h2>This corpse has rotted</h2>
 				<p class="muted">No hand came in time. It has been laid to rest.</p>
 				<a class="btn solid block" href={resolve('/')}>Summon another</a>
+			{:else if data.state === 'complete' && step !== 'sealed' && data.isMine}
+				<p class="label">{partLabel}</p>
+				<h2>{part} is drawn</h2>
+				<p class="muted">Your hand has done its part.</p>
+				<a class="btn block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
+					Watch over the corpse
+				</a>
 			{:else if data.state === 'complete' && step !== 'sealed'}
 				<p class="label">{partLabel}</p>
 				<h2>Already drawn</h2>
@@ -160,15 +174,12 @@
 				<h2>{part} is drawn</h2>
 				{#if nextInvitePath}
 					<p>Pass the corpse on. Send this link to the next hand. They will see only the edge.</p>
-					<ShareLink
-						path={nextInvitePath}
-						text="Draw the next part of a corpse."
-					/>
+					<ShareLink path={nextInvitePath} text="Draw the next part of a corpse." />
 				{/if}
 				<PushPrompt
-					corpseId={data.corpseId}
 					vapidPublicKey={data.vapidPublicKey}
 					deviceId={data.deviceId}
+					reachable={data.reachable}
 					reason="Be summoned when the corpse is complete."
 				/>
 				<a class="btn ghost block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
@@ -203,7 +214,25 @@
 				>
 					{drawnWith === 'canvas' ? 'Keep drawing' : 'Adjust the photo'}
 				</button>
-			{:else}
+			{:else if gate === 'ios-install' || gate === 'in-app'}
+				<p class="label">{partLabel}</p>
+				<h2>Take the corpse home</h2>
+				{#if gate === 'ios-install'}
+					<p>
+						On iPhone, Corpse Club can only summon you from your Home Screen. Without it, you will
+						not hear when the corpse is complete, or when it waits on you.
+					</p>
+				{:else}
+					<p>
+						This app's built-in browser cannot summon you, so you would not hear when the corpse is
+						complete. Open it in your own browser first.
+					</p>
+				{/if}
+				<InstallGuide kind={gate} deviceId={data.deviceId} />
+				<button class="btn ghost block" type="button" onclick={() => (gate = 'open')}>
+					Draw without summons
+				</button>
+			{:else if gate === 'open'}
 				<p class="label">{partLabel}</p>
 				<h2>{data.position === 1 ? 'Your turn to draw' : 'You have been summoned'}</h2>
 

@@ -1,64 +1,54 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { existingSubscription, pushSupport, subscribeToCorpse } from '$lib/push';
+	import { pushSupport, refreshSubscription, subscribeDevice } from '$lib/push';
+	import InstallGuide from './InstallGuide.svelte';
 
 	let {
-		corpseId,
 		vapidPublicKey,
 		deviceId,
+		reachable,
 		reason
-	}: { corpseId: string; vapidPublicKey: string; deviceId: string; reason: string } = $props();
+	}: { vapidPublicKey: string; deviceId: string; reachable: boolean; reason: string } = $props();
 
 	type State =
 		| 'checking'
 		| 'idle'
 		| 'working'
 		| 'subscribed'
+		| 'elsewhere'
 		| 'denied'
 		| 'ios-install'
+		| 'in-app'
 		| 'unsupported'
 		| 'failed';
 	let status = $state<State>('checking');
-	let copied = $state(false);
+	let canSubscribe = $state(false);
 
 	onMount(() => {
 		const support = pushSupport();
+		canSubscribe = support === 'supported' && Notification.permission !== 'denied';
 		if (support !== 'supported') {
-			status = support;
+			status = reachable ? 'elsewhere' : support;
 			return;
 		}
 		if (Notification.permission === 'denied') {
-			status = 'denied';
+			status = reachable ? 'elsewhere' : 'denied';
 			return;
 		}
-		existingSubscription().then(async (sub) => {
-			if (!sub) {
-				status = 'idle';
-				return;
-			}
-			// Permission already granted: bind this corpse without asking again.
-			try {
-				await subscribeToCorpse(corpseId, vapidPublicKey);
-				status = 'subscribed';
-			} catch {
-				status = 'idle';
-			}
-		});
+		// Permission already granted: tie this browser to the current mark without asking again.
+		refreshSubscription()
+			.then((found) => (status = found ? 'subscribed' : reachable ? 'elsewhere' : 'idle'))
+			.catch(() => (status = 'idle'));
 	});
 
 	async function subscribe() {
 		status = 'working';
 		try {
-			await subscribeToCorpse(corpseId, vapidPublicKey);
+			await subscribeDevice(vapidPublicKey);
 			status = 'subscribed';
 		} catch (e) {
 			status = e instanceof Error && e.message === 'denied' ? 'denied' : 'failed';
 		}
-	}
-
-	async function copyMark() {
-		await navigator.clipboard.writeText(deviceId);
-		copied = true;
 	}
 </script>
 
@@ -67,31 +57,23 @@
 		<p class="muted pulse">Listening...</p>
 	{:else if status === 'subscribed'}
 		<p class="label">Bound</p>
-		<p>You will be summoned.</p>
+		<p>You will be summoned, for this corpse and every one after.</p>
+	{:else if status === 'elsewhere'}
+		<p class="label">Bound</p>
+		<p>
+			Summons reach you where you first agreed to them, such as Corpse Club on your Home Screen.
+		</p>
+		{#if canSubscribe}
+			<button class="btn block" type="button" onclick={subscribe}>Summon me here too</button>
+		{/if}
 	{:else if status === 'ios-install'}
 		<p class="label">Summons on iPhone</p>
-		<p>
-			{reason} On iPhone, summons only reach Corpse Club from your Home Screen.
-		</p>
-		<ol>
-			<li>
-				Open your browser's own <strong>Share</strong> menu, not the one on this page. In Safari it is
-				the square with an arrow, behind <strong>•••</strong> on newer iPhones. In Chrome it sits in
-				the address bar. Elsewhere, look in the browser menu.
-			</li>
-			<li>
-				Scroll down and tap <strong>Add to Home Screen</strong>. The share button on this page only
-				sends the link and cannot do this.
-			</li>
-			<li>Open Corpse Club from your Home Screen. Your corpses follow.</li>
-			<li>Open this corpse there and ask to be summoned.</li>
-		</ol>
-		<p class="muted small">
-			If your corpses do not follow, copy your mark and adopt it under My corpses in the app.
-		</p>
-		<button class="btn block" type="button" onclick={copyMark}>
-			{copied ? 'Mark copied' : 'Copy your mark'}
-		</button>
+		<p>{reason} On iPhone, summons only reach Corpse Club from your Home Screen.</p>
+		<InstallGuide kind="ios-install" {deviceId} />
+	{:else if status === 'in-app'}
+		<p class="label">No summons here</p>
+		<p>{reason} This app's built-in browser cannot summon you.</p>
+		<InstallGuide kind="in-app" {deviceId} />
 	{:else if status === 'unsupported'}
 		<p class="label">No summons</p>
 		<p class="muted">This browser cannot summon you. Return here to check on the corpse.</p>
@@ -116,21 +98,5 @@
 	.summons {
 		display: grid;
 		gap: 0.9rem;
-	}
-
-	ol {
-		margin: 0;
-		padding-left: 1.25rem;
-		display: grid;
-		gap: 0.35rem;
-		color: var(--bone);
-	}
-
-	strong {
-		font-weight: 600;
-	}
-
-	.small {
-		font-size: 0.8rem;
 	}
 </style>

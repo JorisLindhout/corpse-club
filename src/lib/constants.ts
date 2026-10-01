@@ -20,8 +20,15 @@ export const HOUR = 60 * 60 * 1000;
 export const FIRST_REMINDER_AFTER = 48 * HOUR;
 export const NEXT_REMINDER_AFTER = 24 * HOUR;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const UUID_RE = new RegExp(`^${UUID}$`, 'i');
+const RESUME_RE = new RegExp(`^/(draw/${UUID}|c/${UUID}(/status)?)$`, 'i');
 
 export function isUuid(value: unknown): value is string {
 	return typeof value === 'string' && UUID_RE.test(value);
+}
+
+/** Pages an installed app may open on its first launch, where it was added from. */
+export function isResumePath(value: unknown): value is string {
+	return typeof value === 'string' && RESUME_RE.test(value);
 }

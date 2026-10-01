@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { isUuid } from '$lib/constants';
+import { isResumePath, isUuid } from '$lib/constants';
 import { DESCRIPTION, SITE_NAME } from '$lib/seo';
 
 const ICONS = [
@@ -19,11 +19,18 @@ const ICONS = [
 /**
  * Manifests are fetched without cookies, so the page passes its mark in the
  * link. iOS gives Home Screen apps fresh storage; the start URL carries the
- * mark across so the installed app wakes up as the same hand.
+ * mark across so the installed app wakes up as the same hand, and `next`
+ * brings it back to the page it was added from.
  */
 export const GET: RequestHandler = ({ url }) => {
 	const mark = url.searchParams.get('mark');
-	const start = isUuid(mark) ? `/my-corpses?mark=${mark.toLowerCase()}` : '/my-corpses';
+	const next = url.searchParams.get('next');
+	const params = new URLSearchParams();
+	if (isUuid(mark)) {
+		params.set('mark', mark.toLowerCase());
+		if (isResumePath(next)) params.set('next', next);
+	}
+	const start = params.size ? `/my-corpses?${params}` : '/my-corpses';
 
 	const manifest = {
 		name: SITE_NAME,

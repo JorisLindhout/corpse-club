@@ -63,9 +63,9 @@
 		{/if}
 
 		<PushPrompt
-			corpseId={corpse.id}
 			vapidPublicKey={data.vapidPublicKey}
 			deviceId={data.deviceId}
+			reachable={data.reachable}
 			reason="Be summoned when the corpse is complete."
 		/>
 	{:else}

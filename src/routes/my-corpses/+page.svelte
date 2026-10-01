@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { SECTION_HEIGHT, SECTION_WIDTH, SECTION_COUNT } from '$lib/constants';
 	import { adoptDevice } from '$lib/device';
+	import { refreshSubscription } from '$lib/push';
 
 	let { data } = $props();
 
@@ -41,6 +42,7 @@
 		}
 		mark = '';
 		markFeedback = 'Mark adopted.';
+		await refreshSubscription().catch(() => false);
 		await invalidateAll();
 	}
 </script>

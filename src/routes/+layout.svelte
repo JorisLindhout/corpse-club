@@ -1,9 +1,10 @@
 <script lang="ts">
 	import '../app.css';
-	import { afterNavigate, invalidateAll, onNavigate, replaceState } from '$app/navigation';
+	import { afterNavigate, goto, invalidateAll, onNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { adoptInstallMark, syncDevice } from '$lib/device';
+	import { isResumePath } from '$lib/constants';
+	import { claimFirstLaunch, syncDevice } from '$lib/device';
 	import { isStandalone } from '$lib/push';
 	import splash from '$lib/splash.json';
 	import { DEFAULT_PREVIEW, SITE_NAME, UNLISTED } from '$lib/seo';
@@ -15,9 +16,12 @@
 	let unlisted = $derived(UNLISTED.has(page.route.id ?? ''));
 	let immersive = $derived(page.route.id?.startsWith('/draw') ?? false);
 	let home = $derived(page.route.id === '/');
-	let manifest = $derived(
-		data.deviceId ? `/manifest.webmanifest?mark=${data.deviceId}` : '/manifest.webmanifest'
-	);
+	let manifest = $derived.by(() => {
+		if (!data.deviceId) return '/manifest.webmanifest';
+		const params = new URLSearchParams({ mark: data.deviceId });
+		if (isResumePath(page.url.pathname)) params.set('next', page.url.pathname);
+		return `/manifest.webmanifest?${params}`;
+	});
 
 	afterNavigate(({ type }) => {
 		if (type === 'enter') queueMicrotask(claimDevice);
@@ -27,9 +31,15 @@
 	function claimDevice() {
 		const mark = page.url.searchParams.get('mark');
 		if (mark !== null && page.route.id === '/my-corpses') {
-			const adopted = isStandalone() && adoptInstallMark(mark);
+			const launch = isStandalone() ? claimFirstLaunch(mark) : null;
+			const next = page.url.searchParams.get('next');
+			if (launch?.first && isResumePath(next)) {
+				if (!launch.adopted) syncDevice(data.deviceId);
+				goto(next, { replaceState: true, invalidateAll: true });
+				return;
+			}
 			replaceState(resolve('/my-corpses'), page.state);
-			if (adopted) {
+			if (launch?.adopted) {
 				invalidateAll();
 				return;
 			}

@@ -40,16 +40,19 @@ const LAUNCHED_KEY = 'cc_launched';
 
 /**
  * The installed app's start URL carries the mark of the browser it was added
- * from. Only its first launch may adopt it; later launches would otherwise
- * undo a mark adopted by hand.
+ * from, and the page it was added on. Only its first launch may act on them;
+ * later launches would otherwise undo a mark adopted by hand, or keep
+ * returning to an old page.
  */
-export function adoptInstallMark(mark: string): boolean {
+export function claimFirstLaunch(mark: string): { first: boolean; adopted: boolean } {
 	try {
-		if (localStorage.getItem(LAUNCHED_KEY)) return false;
+		if (localStorage.getItem(LAUNCHED_KEY)) return { first: false, adopted: false };
 		localStorage.setItem(LAUNCHED_KEY, '1');
-		if (localStorage.getItem(DEVICE_STORAGE_KEY) === mark.toLowerCase()) return false;
+		if (localStorage.getItem(DEVICE_STORAGE_KEY) === mark.toLowerCase()) {
+			return { first: true, adopted: false };
+		}
 	} catch {
-		return false;
+		return { first: false, adopted: false };
 	}
-	return adoptDevice(mark);
+	return { first: true, adopted: adoptDevice(mark) };
 }

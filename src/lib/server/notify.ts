@@ -1,4 +1,4 @@
-import { deleteSubscription, subscriptionsFor } from './repo';
+import { deleteSubscription, deviceSubscriptions, participantSubscriptions } from './repo';
 import { sendWebPush } from './webpush';
 
 export interface PushEnv {
@@ -17,8 +17,8 @@ export interface Summons {
 }
 
 /**
- * Sends a notification to every subscription on a corpse, optionally limited
- * to a single device. Dead subscriptions are pruned.
+ * Sends a notification to every device that created or drew in a corpse, or
+ * only to `deviceId`. Dead subscriptions are pruned.
  */
 export async function summon(
 	env: PushEnv,
@@ -37,9 +37,11 @@ export async function summon(
 		privateKey: env.VAPID_PRIVATE_KEY,
 		subject: env.VAPID_SUBJECT
 	};
-	const subs = (await subscriptionsFor(env.DB, corpseId, options.deviceId)).filter(
-		(s) => !options.excludeDeviceId || s.device_id !== options.excludeDeviceId
-	);
+	const subs = (
+		options.deviceId
+			? await deviceSubscriptions(env.DB, options.deviceId)
+			: await participantSubscriptions(env.DB, corpseId)
+	).filter((s) => !options.excludeDeviceId || s.device_id !== options.excludeDeviceId);
 
 	const results = await Promise.allSettled(
 		subs.map(async (sub) => {
