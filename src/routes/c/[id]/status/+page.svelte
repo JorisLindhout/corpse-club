@@ -55,9 +55,7 @@
 				</p>
 				<ShareLink
 					path={corpse.invitePath}
-					text="Draw part {ROMAN[
-						active.position - 1
-					]} of a corpse. You will see only the edge of what came before."
+					text="Draw part {ROMAN[active.position - 1]} of a corpse."
 				/>
 			</div>
 		{:else}

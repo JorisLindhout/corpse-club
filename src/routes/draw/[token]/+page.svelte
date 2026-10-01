@@ -162,7 +162,7 @@
 					<p>Pass the corpse on. Send this link to the next hand. They will see only the edge.</p>
 					<ShareLink
 						path={nextInvitePath}
-						text="Draw the next part of a corpse. You will see only the edge of what came before."
+						text="Draw the next part of a corpse."
 					/>
 				{/if}
 				<PushPrompt

@@ -74,7 +74,15 @@
 			{reason} On iPhone, summons only reach Corpse Club from your Home Screen.
 		</p>
 		<ol>
-			<li>Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</li>
+			<li>
+				Open your browser's own <strong>Share</strong> menu, not the one on this page. In Safari it is
+				the square with an arrow, behind <strong>•••</strong> on newer iPhones. In Chrome it sits in
+				the address bar. Elsewhere, look in the browser menu.
+			</li>
+			<li>
+				Scroll down and tap <strong>Add to Home Screen</strong>. The share button on this page only
+				sends the link and cannot do this.
+			</li>
 			<li>Open Corpse Club from your Home Screen. Your corpses follow.</li>
 			<li>Open this corpse there and ask to be summoned.</li>
 		</ol>
