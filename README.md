@@ -84,7 +84,7 @@ npm run db:migrate:remote
 # R2 (enable R2 in the dashboard first)
 npx wrangler r2 bucket create corpse-club-images --location weur
 
-# Ship it (builds, then deploys the Worker with its assets and cron trigger)
+# Ship it (builds, applies pending D1 migrations, then deploys the Worker with its assets and cron trigger)
 npm run deploy
 
 # Secret: the VAPID private key
@@ -95,7 +95,7 @@ The app lives at [corpse-club.joris.wtf](https://corpse-club.joris.wtf), attache
 
 Cloudflare Images needs no setup: the Free plan allows 5,000 unique transformations a month, and each completed corpse uses one. Beyond that, new transformations fail (no charge), and the app falls back to the browser upload described under Images.
 
-For automatic deploys, connect the repository with [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/), using `npm run build` as the build command and `npx wrangler deploy` as the deploy command.
+For automatic deploys, connect the repository with [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/), using `npm run build` as the build command and `npx wrangler d1 migrations apply corpse-club --remote && npx wrangler deploy` as the deploy command. The code expects every migration to be applied, so never deploy without them.
 
 ### Rate limiting
 
@@ -128,6 +128,8 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 ### Camera overlay
 
 `getUserMedia({ video: { facingMode: 'environment' } })` fills the screen. A framing guide in the section's aspect ratio sits in the middle, and the previous strip is drawn just above its top edge. It is converted to transparent red ink so it stays visible over white paper. Tap the strip to hide or show it. Line up the paper's top edge with the guide, continue the red lines, and capture.
+
+A strip with no ink is a dead end for the next hand, so the browser checks it on both sides (`overlapHasInk` and `stripHasInk` in `src/lib/image.ts`, measured against the strip's own paper tone). Before folding, a hand whose lines stop short of the red line is warned, and "Keep drawing" becomes the main action. A hand who receives a bare strip is told so on the intro and in the camera, instead of being shown an empty overlay.
 
 ### Devices
 
@@ -213,7 +215,7 @@ wrangler.adapter.toml  tells the adapter where to write its build
 | `npm run dev`               | Dev server with local D1 and R2                      |
 | `npm run build`             | Production build into `.svelte-kit/cloudflare`       |
 | `npm run preview`           | Build, then run the Worker with `wrangler dev`       |
-| `npm run deploy`            | Build and deploy the Worker                          |
+| `npm run deploy`            | Build, apply D1 migrations, and deploy the Worker    |
 | `npm run db:migrate:local`  | Apply migrations locally                             |
 | `npm run db:migrate:remote` | Apply migrations to the production D1                |
 | `npm run vapid`             | Generate a VAPID key pair                            |

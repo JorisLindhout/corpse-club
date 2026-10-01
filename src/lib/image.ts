@@ -46,6 +46,50 @@ export function cropOverlap(section: HTMLCanvasElement): HTMLCanvasElement {
 	return strip;
 }
 
+/** How much darker than the paper a pixel must be to count as ink. */
+const INK_CONTRAST = 48;
+/** Below this share of inked pixels, a strip reads as a bare edge. */
+const MIN_INK_SHARE = 0.002;
+
+function luminance(px: Uint8ClampedArray, i: number): number {
+	return (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8;
+}
+
+/** Measured against the strip's own paper tone, so dim photos of blank paper stay blank. */
+function hasInk(image: ImageData): boolean {
+	const px = image.data;
+	const pixels = px.length / 4;
+	const histogram = new Uint32Array(256);
+	for (let i = 0; i < px.length; i += 4) histogram[luminance(px, i)]++;
+	let paper = 255;
+	for (let v = 0, acc = 0; v < 256; v++) {
+		acc += histogram[v];
+		if (acc >= pixels * 0.6) {
+			paper = v;
+			break;
+		}
+	}
+	let ink = 0;
+	for (let v = 0; v < paper - INK_CONTRAST; v++) ink += histogram[v];
+	return ink >= pixels * MIN_INK_SHARE;
+}
+
+/** Whether any lines reach the strip the next hand will see. */
+export function overlapHasInk(section: HTMLCanvasElement): boolean {
+	return hasInk(
+		cropOverlap(section).getContext('2d')!.getImageData(0, 0, SECTION_WIDTH, OVERLAP_HEIGHT)
+	);
+}
+
+/** Whether a received strip holds any lines to continue. */
+export async function stripHasInk(src: string): Promise<boolean> {
+	const img = await loadImage(src);
+	const canvas = createCanvas(img.naturalWidth, img.naturalHeight);
+	const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+	ctx.drawImage(img, 0, 0);
+	return hasInk(ctx.getImageData(0, 0, canvas.width, canvas.height));
+}
+
 export function loadImage(src: string): Promise<HTMLImageElement> {
 	return new Promise((resolve, reject) => {
 		const img = new Image();

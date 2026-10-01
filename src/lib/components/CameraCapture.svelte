@@ -14,6 +14,7 @@
 
 	let {
 		overlapSrc,
+		bareEdge = false,
 		isLast,
 		title,
 		oncapture,
@@ -21,6 +22,8 @@
 		oncancel
 	}: {
 		overlapSrc: string | null;
+		/** The previous strip holds no lines, so there is nothing to line up with. */
+		bareEdge?: boolean;
 		isLast: boolean;
 		title: string;
 		oncapture: (frame: HTMLCanvasElement, crop: Crop) => void;
@@ -132,7 +135,7 @@
 			{/if}
 		</div>
 
-		{#if overlay}
+		{#if overlay && !bareEdge}
 			<button
 				type="button"
 				class="overlay"
@@ -161,6 +164,11 @@
 			<p class="pulse">Opening the eye...</p>
 		{:else if status === 'failed'}
 			<p>The camera will not open.</p>
+		{:else if overlapSrc && bareEdge}
+			<p>
+				The previous hand left the edge bare. Lay your paper inside the frame and begin anywhere
+				along its top edge.
+			</p>
 		{:else if overlay}
 			<p>
 				Lay your paper inside the frame. Its top edge meets the red lines. Continue them. Tap the

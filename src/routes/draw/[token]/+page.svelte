@@ -2,9 +2,15 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { MAX_NAME_LENGTH, ROMAN, SECTION_LABELS } from '$lib/constants';
+	import {
+		MAX_NAME_LENGTH,
+		OVERLAP_HEIGHT,
+		ROMAN,
+		SECTION_HEIGHT,
+		SECTION_LABELS
+	} from '$lib/constants';
 	import { randomDemon } from '$lib/demons';
-	import { cropOverlap, encodeCanvas } from '$lib/image';
+	import { cropOverlap, encodeCanvas, overlapHasInk, stripHasInk } from '$lib/image';
 	import { pushSupport } from '$lib/push';
 	import CameraCapture, { type Crop } from '$lib/components/CameraCapture.svelte';
 	import DrawingCanvas from '$lib/components/DrawingCanvas.svelte';
@@ -29,6 +35,10 @@
 	let previewUrl = $state<string | null>(null);
 	let failure = $state<string | null>(null);
 	let nextInvitePath = $state<string | null>(null);
+	/** The previous hand's strip holds no lines to continue. */
+	let bareEdge = $state(false);
+	/** No lines reach this section's own strip, so the next hand would see nothing. */
+	let bareFold = $state(false);
 	/** Hands that cannot be summoned where they are get sent home before they draw. */
 	let gate = $state<'checking' | 'ios-install' | 'in-app' | 'open'>('checking');
 
@@ -43,6 +53,11 @@
 		const support = pushSupport();
 		gate =
 			!data.reachable && (support === 'ios-install' || support === 'in-app') ? support : 'open';
+		if (data.overlapUrl) {
+			stripHasInk(data.overlapUrl)
+				.then((ink) => (bareEdge = !ink))
+				.catch(() => {});
+		}
 	});
 
 	function open(next: Step) {
@@ -53,6 +68,7 @@
 	function review(canvas: HTMLCanvasElement, tool: Tool) {
 		section = canvas;
 		drawnWith = tool;
+		bareFold = !data.isLast && !overlapHasInk(canvas);
 		previewUrl = canvas.toDataURL('image/jpeg', 0.8);
 		open('review');
 	}
@@ -102,6 +118,7 @@
 {#if step === 'camera'}
 	<CameraCapture
 		overlapSrc={data.overlapUrl}
+		{bareEdge}
 		isLast={data.isLast}
 		{title}
 		oncapture={(frame, crop) => {
@@ -189,31 +206,58 @@
 				<p class="label">{partLabel}</p>
 				<h2>{data.isLast ? 'Unfold the corpse?' : 'Fold the paper?'}</h2>
 				{#if previewUrl}
-					<img class="preview" src={previewUrl} alt="Your section" />
+					<div class="preview">
+						<img src={previewUrl} alt="Your section" />
+						{#if !data.isLast}
+							<span class="fold" style:height="{(OVERLAP_HEIGHT / SECTION_HEIGHT) * 100}%"></span>
+						{/if}
+					</div>
 				{/if}
-				<p class="muted">
-					{data.isLast
-						? 'Yours is the last hand. Unfolding reveals the whole creature to all three.'
-						: 'Once folded, the next hand sees only the strip below the red line. There is no going back.'}
-				</p>
+				{#if bareFold}
+					<p class="blood" role="alert">
+						Nothing crosses the red line. The next hand would find a bare edge, with no lines to
+						continue. {drawnWith === 'canvas'
+							? 'Draw down into the strip at the bottom.'
+							: 'Shift the photo up until your lines reach it, or draw further down your paper and retake.'}
+					</p>
+				{:else}
+					<p class="muted">
+						{data.isLast
+							? 'Yours is the last hand. Unfolding reveals the whole creature to all three.'
+							: 'Once folded, the next hand sees only the strip below the red line. There is no going back.'}
+					</p>
+				{/if}
 				{#if failure}
 					<p class="blood" role="alert">{failure}</p>
 				{/if}
-				<button class="btn solid block" type="button" onclick={seal} disabled={step === 'sending'}>
-					{#if step === 'sending'}
-						<span class="pulse">{data.isLast ? 'Unfolding...' : 'Folding...'}</span>
-					{:else}
-						{data.isLast ? 'Unfold it' : 'Fold it'}
-					{/if}
-				</button>
-				<button
-					class="btn ghost block"
-					type="button"
-					onclick={() => open(drawnWith)}
-					disabled={step === 'sending'}
-				>
-					{drawnWith === 'canvas' ? 'Keep drawing' : 'Adjust the photo'}
-				</button>
+				<div class="actions" class:reversed={bareFold}>
+					<button
+						class="btn block"
+						class:solid={!bareFold}
+						class:ghost={bareFold}
+						type="button"
+						onclick={seal}
+						disabled={step === 'sending'}
+					>
+						{#if step === 'sending'}
+							<span class="pulse">{data.isLast ? 'Unfolding...' : 'Folding...'}</span>
+						{:else if bareFold}
+							Fold it anyway
+						{:else}
+							{data.isLast ? 'Unfold it' : 'Fold it'}
+						{/if}
+					</button>
+					<button
+						class="btn block"
+						class:solid={bareFold}
+						class:ghost={!bareFold}
+						type="button"
+						onclick={() => open(drawnWith)}
+						disabled={step === 'sending'}
+					>
+						{drawnWith === 'canvas' ? 'Keep drawing' : 'Adjust the photo'}
+					</button>
+				</div>
 			{:else if gate === 'ios-install' || gate === 'in-app'}
 				<p class="label">{partLabel}</p>
 				<h2>Take the corpse home</h2>
@@ -236,7 +280,14 @@
 				<p class="label">{partLabel}</p>
 				<h2>{data.position === 1 ? 'Your turn to draw' : 'You have been summoned'}</h2>
 
-				{#if data.overlapUrl}
+				{#if data.overlapUrl && bareEdge}
+					<p>
+						You draw <strong>{part.toLowerCase()}</strong>. The previous hand stopped short of the
+						fold and left the edge bare. There are no lines to continue, so begin anywhere along the
+						top edge of your page.
+					</p>
+					<OverlapStrip src={data.overlapUrl} label="A bare edge" />
+				{:else if data.overlapUrl}
 					<p>
 						You draw <strong>{part.toLowerCase()}</strong>. Below is all you may see of what came
 						before. Continue its lines from the top edge of your page.
@@ -250,7 +301,9 @@
 				{/if}
 
 				{#if !data.isLast && data.overlapUrl}
-					<p class="muted">Let your lines run off the bottom edge for the next hand.</p>
+					<p class="muted">
+						Let your lines run off the bottom edge, so the next hand has something to continue.
+					</p>
 				{/if}
 
 				<label class="field">
@@ -320,12 +373,27 @@
 	}
 
 	.preview {
+		position: relative;
+	}
+
+	.preview img {
 		display: block;
 		width: 100%;
+	}
+
+	.fold {
+		position: absolute;
+		inset: auto 0 0;
+		border-top: 1px dashed var(--crimson);
+		pointer-events: none;
 	}
 
 	.actions {
 		display: grid;
 		gap: 0.75rem;
+	}
+
+	.actions.reversed > :first-child {
+		order: 1;
 	}
 </style>
