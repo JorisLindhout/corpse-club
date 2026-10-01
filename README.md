@@ -91,7 +91,7 @@ npm run deploy
 npx wrangler secret put VAPID_PRIVATE_KEY
 ```
 
-Also set `VAPID_SUBJECT` in `wrangler.toml` to a `mailto:` or `https:` address you control. Push services use it to contact you.
+The app lives at [corpse-club.joris.wtf](https://corpse-club.joris.wtf), attached as a Worker custom domain in `routes`. The `workers.dev` and preview URLs are disabled. Device marks, Home Screen installs and push subscriptions are tied to one origin, so a second public address would split people's corpses. `VAPID_SUBJECT` is the same URL. Push services use it to contact you.
 
 Cloudflare Images needs no setup: the Free plan allows 5,000 unique transformations a month, and each completed corpse uses one. Beyond that, new transformations fail (no charge), and the app falls back to the browser upload described under Images.
 

@@ -4,6 +4,11 @@ main = "workers/app.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_als"]
 
+# One origin only: device marks, installs and push subscriptions are per origin.
+routes = [{ pattern = "corpse-club.joris.wtf", custom_domain = true }]
+workers_dev = false
+preview_urls = false
+
 # Secrets (set with `npx wrangler secret put <NAME>`, or in .dev.vars locally):
 #   VAPID_PRIVATE_KEY  base64url private scalar from `npm run vapid`
 
@@ -22,7 +27,7 @@ enabled = true
 
 [vars]
 VAPID_PUBLIC_KEY = "BMs-57KUdOzOVmiL5USCsvEU-70suTwET5hKrH199jjx8HYcJ-hV10Ab1y5de-k-6VoJb1L8qvgTcU6FsZdvagY"
-VAPID_SUBJECT = "https://corpse-club.pages.dev"
+VAPID_SUBJECT = "https://corpse-club.joris.wtf"
 
 [[d1_databases]]
 binding = "DB"
