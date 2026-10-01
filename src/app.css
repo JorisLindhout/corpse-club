@@ -1,0 +1,246 @@
+@import '@fontsource/pirata-one/400.css';
+@import '@fontsource-variable/archivo/wdth.css';
+
+:root {
+	--black: #000000;
+	--bone: #f0ede6;
+	--blood: #8b0000;
+	--crimson: #b3001b;
+	--gray: #666666;
+	--white: #ffffff;
+
+	--font-display: 'Pirata One', 'UnifrakturCook', serif;
+	--font-body: 'Archivo Variable', 'Helvetica Neue', Arial, sans-serif;
+
+	--pad: clamp(1.25rem, 5vw, 2rem);
+	--line: 1px solid var(--bone);
+	--nav-height: 4.25rem;
+	--safe-top: env(safe-area-inset-top, 0px);
+	--safe-bottom: env(safe-area-inset-bottom, 0px);
+	--ease: cubic-bezier(0.7, 0, 0.2, 1);
+
+	color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	background: var(--black);
+	color: var(--bone);
+}
+
+body {
+	min-height: 100dvh;
+	font-family: var(--font-body);
+	font-size: 1rem;
+	line-height: 1.55;
+	-webkit-font-smoothing: antialiased;
+	-webkit-tap-highlight-color: transparent;
+	overscroll-behavior: none;
+	text-rendering: optimizeLegibility;
+}
+
+/* Barely-there film grain. */
+body::after {
+	content: '';
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: 1000;
+	opacity: 0.07;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+h3 {
+	font-family: var(--font-display);
+	font-weight: 400;
+	line-height: 0.95;
+	letter-spacing: 0.01em;
+	margin: 0;
+}
+
+h1 {
+	font-size: clamp(3rem, 15vw, 5.5rem);
+}
+
+h2 {
+	font-size: clamp(2.25rem, 10vw, 3.5rem);
+}
+
+h3 {
+	font-size: 1.75rem;
+}
+
+p {
+	margin: 0;
+}
+
+a {
+	color: inherit;
+}
+
+::selection {
+	background: var(--blood);
+	color: var(--bone);
+}
+
+:focus-visible {
+	outline: 1px solid var(--bone);
+	outline-offset: 3px;
+}
+
+.label {
+	font-size: 0.72rem;
+	font-weight: 600;
+	font-stretch: 75%;
+	letter-spacing: 0.28em;
+	text-transform: uppercase;
+	color: var(--gray);
+}
+
+.muted {
+	color: var(--gray);
+}
+
+.blood {
+	color: var(--crimson);
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	min-height: 3.5rem;
+	padding: 0.9rem 1.5rem;
+	border: var(--line);
+	border-radius: 0;
+	background: transparent;
+	color: var(--bone);
+	font: inherit;
+	font-size: 0.85rem;
+	font-weight: 600;
+	font-stretch: 80%;
+	letter-spacing: 0.24em;
+	text-transform: uppercase;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		background-color 120ms linear,
+		color 120ms linear;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.btn:hover,
+.btn:active {
+	background: var(--bone);
+	color: var(--black);
+}
+
+.btn.solid {
+	background: var(--bone);
+	color: var(--black);
+}
+
+.btn.solid:hover,
+.btn.solid:active {
+	background: var(--black);
+	color: var(--bone);
+}
+
+.btn.ghost {
+	border-color: transparent;
+	color: var(--gray);
+}
+
+.btn.ghost:hover,
+.btn.ghost:active {
+	background: transparent;
+	color: var(--bone);
+}
+
+.btn.block {
+	display: flex;
+	width: 100%;
+}
+
+.btn:disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+.field {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.input {
+	width: 100%;
+	min-height: 3.25rem;
+	padding: 0.75rem 0;
+	border: 0;
+	border-bottom: var(--line);
+	border-radius: 0;
+	background: transparent;
+	color: var(--bone);
+	font: inherit;
+	font-size: 1.15rem;
+}
+
+.input::placeholder {
+	color: var(--gray);
+}
+
+.input:focus {
+	outline: none;
+	border-bottom-color: var(--white);
+}
+
+.card {
+	border: var(--line);
+	padding: var(--pad);
+}
+
+.pulse {
+	animation: pulse 1.6s steps(2, jump-none) infinite;
+}
+
+@keyframes pulse {
+	50% {
+		opacity: 0.25;
+	}
+}
+
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 140ms;
+	animation-timing-function: linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 1ms !important;
+	}
+}
