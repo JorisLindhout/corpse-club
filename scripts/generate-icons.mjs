@@ -8,7 +8,6 @@ const INK = '#000';
 const out = new URL('../static/icons/', import.meta.url);
 
 // A corpse-painted goat devil in a 200×300 box, folded into three parts.
-// Paths are drawn with a deliberately unsteady hand (see `jitter`).
 const head = [
 	{ d: 'M74 36 C68 20 66 8 74 -2 C76 10 82 24 88 32 Z', fill: true },
 	{ d: 'M126 36 C132 20 136 10 130 0 C126 12 120 24 112 32 Z', fill: true },
@@ -24,18 +23,12 @@ const head = [
 	{ d: 'M91 88 L95 103 L100 96 L104 104 L109 88 Z', fill: true }
 ];
 const torso = [
-	'M100 100 L100 188',
-	// spiked gauntlets
-	'M100 114 L62 130 L42 116',
-	'M60 124 L56 115 M54 126 L49 118 M66 132 L64 141',
-	'M42 116 L33 108 M42 116 L31 119 M42 116 L37 126',
-	'M100 114 L144 132 L160 120',
-	'M146 126 L150 117 M152 129 L158 122 M139 134 L141 143',
-	// trident
-	'M173 106 L164 222',
-	'M157 115 C156 127 187 130 188 118 M157 115 L155 103 M188 118 L191 106 M173 106 L174 94',
-	{ d: 'M100 120 L100 156 M91 146 L109 146', color: BLOOD, w: 1.3 },
-	'M100 188 L84 200 M100 188 L116 200'
+	'M92 100 L88 110 C68 112 56 120 50 134 L40 160 L32 182',
+	'M32 182 L21 186 M32 182 L28 194 M32 182 L39 191',
+	'M108 100 L112 110 C132 112 144 120 150 134 L160 160 L168 182',
+	'M168 182 L179 186 M168 182 L172 194 M168 182 L161 191',
+	'M74 134 C70 160 76 180 82 200',
+	'M126 134 C128 160 124 180 118 200'
 ];
 const legs = [
 	// goat legs: knees bend back, cloven hooves
@@ -51,35 +44,17 @@ const legs = [
 	{ d: 'M180 244 L169 241 L186 233 L185 251 Z', fill: true }
 ];
 
-function rng(seed) {
-	let s = seed >>> 0;
-	return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 2 ** 32) * 2 - 1;
-}
-
-/** Wobbles every coordinate, seeded so the drawing is the same on every run. */
-function jitter(d, amount, seed) {
-	const r = rng(seed);
-	return d.replace(/-?\d+(\.\d+)?/g, (n) => (Number(n) + r() * amount).toFixed(1));
-}
-
-/** Each stroke is drawn twice, the second fainter and looser, like a sketch. */
-function strokes(list, { width, wobble = 2.2, seed = 97, sketch = true }) {
+function strokes(list, width) {
 	return list
-		.map((item, i) => {
+		.map((item) => {
 			const p = typeof item === 'string' ? { d: item } : item;
 			const color = p.color ?? BONE;
-			const w = (p.w ?? 1) * width;
-			const main = `<path d="${jitter(p.d, wobble, seed + i * 31)}" fill="${p.fill ? color : 'none'}" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
-			const ghost =
-				sketch && !p.fill
-					? `<path d="${jitter(p.d, wobble * 1.8, seed + i * 31 + 7)}" fill="none" stroke="${color}" stroke-opacity="0.45" stroke-width="${w * 0.6}" stroke-linecap="round"/>`
-					: '';
-			return main + ghost;
+			return `<path d="${p.d}" fill="${p.fill ? color : 'none'}" stroke="${color}" stroke-width="${(p.w ?? 1) * width}" stroke-linecap="round" stroke-linejoin="round"/>`;
 		})
 		.join('');
 }
 
-const rough = `<filter id="r" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>`;
+const rough = `<filter id="r" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>`;
 
 /** The whole creature, scaled to `figure` of the canvas height. */
 function creature({ size, figure }) {
@@ -94,13 +69,13 @@ function creature({ size, figure }) {
 		.join('');
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
 <defs>${rough}</defs><rect width="100%" height="100%" fill="#000"/>
-<g transform="translate(${x} ${y}) scale(${scale})">${folds}<g filter="url(#r)">${strokes([...head, ...torso, ...legs], { width: 3.5 })}</g></g></svg>`;
+<g transform="translate(${x} ${y}) scale(${scale})">${folds}<g filter="url(#r)">${strokes([...head, ...torso, ...legs], 3)}</g></g></svg>`;
 }
 
-/** Just the head, for small sizes: thicker lines, no sketch ghosting. */
+/** Just the head, for small sizes. */
 function portrait({ size, background = '#000' }) {
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="40 -4 120 112">
-${background ? `<rect x="40" y="-4" width="120" height="112" fill="${background}"/>` : ''}${strokes(head, { width: 7, sketch: false })}</svg>`;
+${background ? `<rect x="40" y="-4" width="120" height="112" fill="${background}"/>` : ''}${strokes(head, 6)}</svg>`;
 }
 
 /** ICO files may embed PNGs directly. */
