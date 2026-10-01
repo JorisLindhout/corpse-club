@@ -1,5 +1,5 @@
-// Renders the app icons into static/icons (and static/favicon.ico). Run with `npm run icons`.
-import { mkdir, writeFile } from 'node:fs/promises';
+// Renders the app icons, iOS launch screens and share image into static/. Run with `npm run icons`.
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
 
 const BONE = '#f0ede6';
@@ -55,20 +55,24 @@ function strokes(list, width) {
 
 const rough = `<filter id="r" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>`;
 
-/** The whole creature, scaled to `figure` of the canvas height. */
-function creature({ size, figure }) {
-	const scale = (size * figure) / 300;
-	const x = (size - 200 * scale) / 2;
-	const y = (size - 300 * scale) / 2;
-	const folds = [100, 200]
+/**
+ * The whole creature, scaled to `figure` of the canvas height. With `span`,
+ * the fold lines run across the full canvas width.
+ */
+function creature({ width, height = width, figure, folds = BLOOD, span = false }) {
+	const scale = (height * figure) / 300;
+	const x = (width - 200 * scale) / 2;
+	const y = (height - 300 * scale) / 2;
+	const [x1, x2] = span ? [-x / scale, (width - x) / scale] : [-30, 230];
+	const lines = [100, 200]
 		.map(
 			(fy) =>
-				`<line x1="-30" x2="230" y1="${fy}" y2="${fy}" stroke="${BLOOD}" stroke-width="1.8" stroke-dasharray="5 6"/>`
+				`<line x1="${x1}" x2="${x2}" y1="${fy}" y2="${fy}" stroke="${folds}" stroke-width="1.8" stroke-dasharray="5 6"/>`
 		)
 		.join('');
-	return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+	return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 <defs>${rough}</defs><rect width="100%" height="100%" fill="#000"/>
-<g transform="translate(${x} ${y}) scale(${scale})">${folds}<g filter="url(#r)">${strokes([...head, ...torso, ...legs], 3)}</g></g></svg>`;
+<g transform="translate(${x} ${y}) scale(${scale})">${lines}<g filter="url(#r)">${strokes([...head, ...torso, ...legs], 3)}</g></g></svg>`;
 }
 
 /** Just the head, for small sizes. */
@@ -111,26 +115,47 @@ await writeFile(
 	)
 );
 
-await save(creature({ size: 512, figure: 0.86 }), 'icon-512.png', 512);
-await save(creature({ size: 512, figure: 0.86 }), 'icon-192.png', 192);
+await save(creature({ width: 512, figure: 0.86 }), 'icon-512.png', 512);
+await save(creature({ width: 512, figure: 0.86 }), 'icon-192.png', 192);
 // Maskable icons are cropped to a circle of 80% diameter.
-await save(creature({ size: 512, figure: 0.6 }), 'icon-maskable-512.png', 512);
-await save(creature({ size: 512, figure: 0.78 }), 'apple-touch-icon.png', 180);
+await save(creature({ width: 512, figure: 0.6 }), 'icon-maskable-512.png', 512);
+await save(creature({ width: 512, figure: 0.6 }), 'icon-maskable-192.png', 192);
+await save(creature({ width: 512, figure: 0.78 }), 'apple-touch-icon.png', 180);
 
-// Android notification badges use only the alpha channel, so the bone lines
-// become opaque and the black background transparent.
-const badge = await sharp(Buffer.from(portrait({ size: 96 })))
-	.resize(96, 96)
-	.greyscale()
-	.raw()
-	.toBuffer();
-const rgba = Buffer.alloc(96 * 96 * 4);
-for (let i = 0; i < badge.length; i++) {
-	rgba.fill(255, i * 4, i * 4 + 3);
-	rgba[i * 4 + 3] = badge[i];
+/**
+ * Android badges and themed (monochrome) icons use only the alpha channel,
+ * so the bone lines become opaque and the black background transparent.
+ */
+async function alpha(svg, size, name) {
+	const grey = await sharp(Buffer.from(svg)).resize(size, size).greyscale().raw().toBuffer();
+	const rgba = Buffer.alloc(size * size * 4);
+	for (let i = 0; i < grey.length; i++) {
+		rgba.fill(255, i * 4, i * 4 + 3);
+		rgba[i * 4 + 3] = grey[i];
+	}
+	await sharp(rgba, { raw: { width: size, height: size, channels: 4 } })
+		.png()
+		.toFile(new URL(name, out).pathname);
 }
-await sharp(rgba, { raw: { width: 96, height: 96, channels: 4 } })
-	.png()
-	.toFile(new URL('badge-96.png', out).pathname);
 
-console.log('Icons written to static/icons and static/favicon.ico');
+await alpha(portrait({ size: 96 }), 96, 'badge-96.png');
+await alpha(creature({ width: 512, figure: 0.6, folds: BONE }), 512, 'icon-monochrome-512.png');
+
+// iOS shows these launch screens instead of a white flash; see src/lib/splash.json.
+const splash = new URL('../static/splash/', import.meta.url);
+await mkdir(splash, { recursive: true });
+const devices = JSON.parse(await readFile(new URL('../src/lib/splash.json', import.meta.url)));
+await Promise.all(
+	devices.map(async ({ width, height, ratio }) => {
+		const [w, h] = [width * ratio, height * ratio];
+		await sharp(Buffer.from(creature({ width: w, height: h, figure: 0.4, span: true })))
+			.png({ palette: true, compressionLevel: 9 })
+			.toFile(new URL(`${w}x${h}.png`, splash).pathname);
+	})
+);
+
+await sharp(Buffer.from(creature({ width: 1200, height: 630, figure: 0.86, span: true })))
+	.png({ palette: true, compressionLevel: 9 })
+	.toFile(new URL('../static/og.png', import.meta.url).pathname);
+
+console.log('Icons written to static/icons, static/splash, static/og.png and static/favicon.ico');

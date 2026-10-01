@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 	import { adoptInstallMark, syncDevice } from '$lib/device';
 	import { isStandalone } from '$lib/push';
+	import splash from '$lib/splash.json';
 
 	let { children, data } = $props();
 
@@ -50,6 +51,25 @@
 		name="description"
 		content="Exquisite corpse for three hands. Draw on paper. Reveal together."
 	/>
+	{#each splash as { width, height, ratio } (`${width}x${height}@${ratio}`)}
+		<link
+			rel="apple-touch-startup-image"
+			href="/splash/{width * ratio}x{height * ratio}.png"
+			media="(device-width: {width}px) and (device-height: {height}px) and (-webkit-device-pixel-ratio: {ratio}) and (orientation: portrait)"
+		/>
+	{/each}
+	<!-- A completed corpse shares its own image instead. -->
+	{#if page.route.id !== '/c/[id]'}
+		<meta property="og:title" content="Corpse Club" />
+		<meta
+			property="og:description"
+			content="Exquisite corpse for three hands. Draw on paper. Reveal together."
+		/>
+		<meta property="og:image" content={new URL('/og.png', page.url).href} />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta name="twitter:card" content="summary_large_image" />
+	{/if}
 </svelte:head>
 
 <div class="app" class:immersive>

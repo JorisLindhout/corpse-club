@@ -9,7 +9,12 @@ const sw = self as unknown as ServiceWorkerGlobalScope;
 const SHELL = `shell-${version}`;
 const IMAGES = 'corpse-images';
 const OFFLINE = '/offline';
-const ASSETS = [...build, ...files, ...prerendered];
+// Launch screens and the share image are only fetched by iOS and link crawlers.
+const ASSETS = [
+	...build,
+	...files.filter((file) => !file.startsWith('/splash/') && file !== '/og.png'),
+	...prerendered
+];
 
 sw.addEventListener('install', (event) => {
 	event.waitUntil(
