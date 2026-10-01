@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
-import { SECTION_COUNT, isUuid } from '$lib/constants';
+import { SECTION_COUNT, SECTION_LABELS, isUuid } from '$lib/constants';
+import { DEFAULT_PREVIEW } from '$lib/seo';
 import { drawState, getByToken, markDrawing } from '$lib/server/repo';
 import { getEnv } from '$lib/server/http';
 import type { PageServerLoad } from './$types';
@@ -15,7 +16,21 @@ export const load: PageServerLoad = async (event) => {
 	const state = drawState(corpse, sections, section);
 	if (state === 'open' && section.status === 'pending') await markDrawing(env.DB, section.id);
 
+	const part = SECTION_LABELS[section.position - 1].toLowerCase();
+	const before = SECTION_LABELS[section.position - 2]?.toLowerCase();
+	const it = section.position === SECTION_COUNT ? 'them' : 'it';
+
 	return {
+		preview:
+			state === 'open'
+				? {
+						...DEFAULT_PREVIEW,
+						title: `You have been handed ${part}`,
+						description: before
+							? `Draw ${it} on paper. You will see only the edge of ${before}.`
+							: `Draw ${it} on paper, then pass the corpse to the next hand.`
+					}
+				: undefined,
 		token,
 		corpseId: corpse.id,
 		position: section.position,
