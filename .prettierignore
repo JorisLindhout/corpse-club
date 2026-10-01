@@ -7,3 +7,8 @@ bun.lockb
 
 # Miscellaneous
 /static/
+
+# Generated
+worker-configuration.d.ts
+.wrangler/
+.svelte-kit/
