@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { isUuid } from '$lib/constants';
+import { DESCRIPTION, SITE_NAME } from '$lib/seo';
 
 const ICONS = [
 	{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -25,9 +26,9 @@ export const GET: RequestHandler = ({ url }) => {
 	const start = isUuid(mark) ? `/my-corpses?mark=${mark.toLowerCase()}` : '/my-corpses';
 
 	const manifest = {
-		name: 'Corpse Club',
-		short_name: 'Corpse Club',
-		description: 'Exquisite corpse for three hands. Draw on paper. Reveal together.',
+		name: SITE_NAME,
+		short_name: SITE_NAME,
+		description: DESCRIPTION,
 		id: '/',
 		start_url: start,
 		scope: '/',

@@ -16,11 +16,6 @@
 		Array.from({ length: SECTION_COUNT }, (_, i) => `/api/corpse/${data.id}/section/${i + 1}`)
 	);
 	let names = $derived(data.contributors.map((n) => n ?? 'Anonymous'));
-	let byline = $derived(
-		data.contributors.every((n) => !n)
-			? 'Drawn by three anonymous hands'
-			: `Drawn by ${names.slice(0, -1).join(', ')} & ${names.at(-1)}`
-	);
 	let completed = $derived(
 		data.completedAt
 			? new Date(data.completedAt).toLocaleDateString('en-GB', {
@@ -86,11 +81,6 @@
 <svelte:head>
 	{#if data.status === 'complete'}
 		<title>A corpse · Corpse Club</title>
-		<meta property="og:title" content="The corpse is complete" />
-		<meta property="og:description" content={byline} />
-		{#if data.hasAssembled}
-			<meta property="og:image" content={new URL(`/api/corpse/${data.id}/image`, page.url).href} />
-		{/if}
 	{:else}
 		<title>Rotted · Corpse Club</title>
 	{/if}
@@ -109,7 +99,7 @@
 	<article>
 		<Reveal
 			{sources}
-			alt="The assembled corpse. {byline}."
+			alt="The assembled corpse. {data.byline}."
 			rememberKey="revealed:{data.id}"
 			{onrevealed}
 		/>

@@ -6,9 +6,13 @@
 	import { adoptInstallMark, syncDevice } from '$lib/device';
 	import { isStandalone } from '$lib/push';
 	import splash from '$lib/splash.json';
+	import { DEFAULT_PREVIEW, SITE_NAME, UNLISTED } from '$lib/seo';
 
 	let { children, data } = $props();
 
+	let preview = $derived(page.data.preview ?? DEFAULT_PREVIEW);
+	let url = $derived(page.url.origin + page.url.pathname);
+	let unlisted = $derived(UNLISTED.has(page.route.id ?? ''));
 	let immersive = $derived(page.route.id?.startsWith('/draw') ?? false);
 	let home = $derived(page.route.id === '/');
 	let manifest = $derived(
@@ -45,12 +49,14 @@
 </script>
 
 <svelte:head>
-	<title>Corpse Club</title>
+	<title>{SITE_NAME}</title>
 	<link rel="manifest" href={manifest} />
-	<meta
-		name="description"
-		content="Exquisite corpse for three hands. Draw on paper. Reveal together."
-	/>
+	<meta name="description" content={preview.description} />
+	{#if unlisted}
+		<meta name="robots" content="noindex" />
+	{:else}
+		<link rel="canonical" href={url} />
+	{/if}
 	{#each splash as { width, height, ratio } (`${width}x${height}@${ratio}`)}
 		<link
 			rel="apple-touch-startup-image"
@@ -58,18 +64,15 @@
 			media="(device-width: {width}px) and (device-height: {height}px) and (-webkit-device-pixel-ratio: {ratio}) and (orientation: portrait)"
 		/>
 	{/each}
-	<!-- A completed corpse shares its own image instead. -->
-	{#if page.route.id !== '/c/[id]'}
-		<meta property="og:title" content="Corpse Club" />
-		<meta
-			property="og:description"
-			content="Exquisite corpse for three hands. Draw on paper. Reveal together."
-		/>
-		<meta property="og:image" content={new URL('/og.png', page.url).href} />
-		<meta property="og:image:width" content="1200" />
-		<meta property="og:image:height" content="630" />
-		<meta name="twitter:card" content="summary_large_image" />
-	{/if}
+	<meta property="og:url" content={url} />
+	<meta property="og:title" content={preview.title} />
+	<meta property="og:description" content={preview.description} />
+	<meta property="og:image" content={new URL(preview.image, page.url).href} />
+	<meta property="og:image:type" content={preview.type} />
+	<meta property="og:image:width" content={String(preview.width)} />
+	<meta property="og:image:height" content={String(preview.height)} />
+	<meta property="og:image:alt" content={preview.alt} />
+	<meta name="twitter:image:alt" content={preview.alt} />
 </svelte:head>
 
 <div class="app" class:immersive>

@@ -1,5 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
+import type { Preview } from '$lib/seo';
+
 declare global {
 	namespace App {
 		interface Platform {
@@ -14,7 +16,9 @@ declare global {
 		}
 
 		// interface Error {}
-		// interface PageData {}
+		interface PageData {
+			preview?: Preview;
+		}
 		// interface PageState {}
 	}
 }

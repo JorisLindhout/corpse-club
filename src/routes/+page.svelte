@@ -1,6 +1,21 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import Creature from '$lib/components/Creature.svelte';
+	import { DESCRIPTION, SITE_NAME } from '$lib/seo';
+
+	const ORIGIN = 'https://corpse-club.joris.wtf';
+	const structured = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'WebSite',
+		name: SITE_NAME,
+		description: DESCRIPTION,
+		url: `${ORIGIN}/`,
+		image: `${ORIGIN}/og.png`,
+		inLanguage: 'en',
+		genre: ['Net art', 'Drawing game'],
+		isAccessibleForFree: true,
+		author: { '@type': 'Person', name: 'Joris Lindhout', url: 'https://joris.wtf/' }
+	}).replaceAll('<', '\\u003c');
 
 	const steps = [
 		['I', 'Draw the head on paper. Photograph it.'],
@@ -8,6 +23,10 @@
 		['III', 'When the third hand is done, the creature is revealed to all.']
 	];
 </script>
+
+<svelte:head>
+	{@html `<script type="application/ld+json">${structured}</script>`}
+</svelte:head>
 
 <section class="hero">
 	<p class="label">Exquisite corpse for three hands</p>

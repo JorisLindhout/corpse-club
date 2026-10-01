@@ -23,7 +23,6 @@
 
 <svelte:head>
 	<title>Awaiting · Corpse Club</title>
-	<meta name="robots" content="noindex" />
 </svelte:head>
 
 <svelte:document
