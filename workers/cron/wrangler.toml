@@ -1,0 +1,25 @@
+#:schema ../../node_modules/wrangler/config-schema.json
+name = "corpse-club-cron"
+main = "index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = false
+
+[triggers]
+crons = ["0 * * * *"]
+
+[observability]
+enabled = true
+
+# Secrets (set with `npx wrangler secret put VAPID_PRIVATE_KEY --config workers/cron/wrangler.toml`):
+#   VAPID_PRIVATE_KEY  same value as the Pages project
+
+[vars]
+VAPID_PUBLIC_KEY = "BMs-57KUdOzOVmiL5USCsvEU-70suTwET5hKrH199jjx8HYcJ-hV10Ab1y5de-k-6VoJb1L8qvgTcU6FsZdvagY"
+VAPID_SUBJECT = "mailto:summon@corpse.club"
+
+# Must match the database in the root wrangler.toml.
+[[d1_databases]]
+binding = "DB"
+database_name = "corpse-club"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "../../migrations"
