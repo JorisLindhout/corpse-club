@@ -1,48 +1,11 @@
 // Renders the app icons, iOS launch screens and share image into static/. Run with `npm run icons`.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import sharp from 'sharp';
+import { head, legs, torso } from '../src/lib/creature.js';
 
 const BONE = '#f0ede6';
 const BLOOD = '#b3001b';
 const out = new URL('../static/icons/', import.meta.url);
-
-// A goat-headed devil in a 200×300 box, folded into three parts.
-const head = [
-	// swept-back horns
-	'M74 36 C68 20 66 8 74 -2 C76 10 82 24 88 32',
-	'M126 36 C132 20 136 10 130 0 C126 12 120 24 112 32',
-	'M70 14 L76 16 M70 22 L78 24 M130 14 L124 16 M131 22 L123 24',
-	'M67 44 C63 25 137 25 133 45 C136 67 120 85 100 91 C79 85 64 66 67 44 Z',
-	'M67 48 L49 53 L66 59',
-	'M133 48 L152 55 L134 60',
-	// slanted eyes, nose, fanged mouth
-	'M75 47 L92 51 L88 63 Z',
-	'M125 47 L108 51 L112 63 Z',
-	'M100 60 L96 69 L104 69 Z',
-	'M83 79 C92 76 108 76 117 79',
-	'M87 78 L90 88 L93 77 M107 77 L110 88 L113 78'
-];
-const torso = [
-	'M92 100 L88 110 C68 112 56 120 50 134 L40 160 L32 182',
-	'M32 182 L21 186 M32 182 L28 194 M32 182 L39 191',
-	'M108 100 L112 110 C132 112 144 120 150 134 L160 160 L168 182',
-	'M168 182 L179 186 M168 182 L172 194 M168 182 L161 191',
-	// spine and ribs
-	'M100 104 L100 196',
-	'M100 124 C82 124 72 132 72 142 M100 124 C118 124 128 132 128 142',
-	'M100 138 C84 138 76 146 76 154 M100 138 C116 138 124 146 124 154',
-	'M74 134 C70 160 68 180 66 200',
-	'M126 134 C130 160 132 180 134 200'
-];
-const legs = [
-	'M66 200 C58 228 78 238 72 258 L60 285',
-	'M134 200 C142 228 122 238 128 258 L140 285',
-	'M53 285 L67 285 C70 290 72 294 73 298 L62 298 L60 291 L58 298 L47 298 C48 294 50 290 53 285 Z',
-	'M133 285 L147 285 C150 290 152 294 153 298 L142 298 L140 291 L138 298 L127 298 C128 294 130 290 133 285 Z',
-	// arrow tail
-	'M100 200 C112 226 150 216 158 240 C162 252 170 256 178 250',
-	'M178 250 L166 248 L182 238 L184 256 Z'
-];
 
 function strokes(list, width) {
 	return list

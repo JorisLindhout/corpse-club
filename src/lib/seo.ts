@@ -1,5 +1,5 @@
 export const SITE_NAME = 'Corpse Club';
-export const DESCRIPTION = 'Exquisite corpse for three hands. Draw on paper. Reveal together.';
+export const DESCRIPTION = 'A ritual for three hands. Draw blind. Unfold the corpse.';
 
 /** What a shared link unfurls into. Pages override it by returning `preview` from their load. */
 export interface Preview {

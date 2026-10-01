@@ -17,19 +17,11 @@ export const load: PageServerLoad = async (event) => {
 	if (state === 'open' && section.status === 'pending') await markDrawing(env.DB, section.id);
 
 	const part = SECTION_LABELS[section.position - 1].toLowerCase();
-	const before = SECTION_LABELS[section.position - 2]?.toLowerCase();
-	const it = section.position === SECTION_COUNT ? 'them' : 'it';
 
 	return {
 		preview:
 			state === 'open'
-				? {
-						...DEFAULT_PREVIEW,
-						title: `You have been handed ${part}`,
-						description: before
-							? `Draw ${it} on paper. You will see only the edge of ${before}.`
-							: `Draw ${it} on paper, then pass the corpse to the next hand.`
-					}
+				? { ...DEFAULT_PREVIEW, title: `You are summoned to draw ${part}` }
 				: undefined,
 		token,
 		corpseId: corpse.id,
