@@ -1,0 +1,10 @@
+#:schema node_modules/wrangler/config-schema.json
+# Read only by @sveltejs/adapter-cloudflare, which writes its worker to `main`.
+# Deploys use wrangler.toml, whose entry wraps that worker to add the cron.
+name = "corpse-club"
+main = ".svelte-kit/cloudflare/_worker.js"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"

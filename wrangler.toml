@@ -1,11 +1,24 @@
 #:schema node_modules/wrangler/config-schema.json
 name = "corpse-club"
+main = "workers/app.ts"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_als"]
-pages_build_output_dir = ".svelte-kit/cloudflare"
 
-# Secrets (set with `npx wrangler pages secret put <NAME>`, or in .dev.vars locally):
+# Secrets (set with `npx wrangler secret put <NAME>`, or in .dev.vars locally):
 #   VAPID_PRIVATE_KEY  base64url private scalar from `npm run vapid`
+
+[alias]
+sveltekit-worker = "./.svelte-kit/cloudflare/_worker.js"
+
+[assets]
+directory = ".svelte-kit/cloudflare"
+binding = "ASSETS"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[observability]
+enabled = true
 
 [vars]
 VAPID_PUBLIC_KEY = "BMs-57KUdOzOVmiL5USCsvEU-70suTwET5hKrH199jjx8HYcJ-hV10Ab1y5de-k-6VoJb1L8qvgTcU6FsZdvagY"
@@ -20,3 +33,9 @@ migrations_dir = "migrations"
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "corpse-club-images"
+
+# Remote in dev too: the offline emulation ignores draw() and would store a
+# corpse with only its head.
+[images]
+binding = "IMAGES"
+remote = true

@@ -25,3 +25,4 @@ vite.config.ts.timestamp-*
 # Cloudflare local secrets
 .dev.vars*
 !.dev.vars.example
+.tmp/

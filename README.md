@@ -6,28 +6,28 @@ No accounts. Turns are handed over with invite links, devices are tracked with a
 
 ## Stack
 
-| Layer              | Technology                                                        |
-| ------------------ | ----------------------------------------------------------------- |
-| Frontend           | SvelteKit (Svelte 5, runes)                                       |
-| Hosting            | Cloudflare Pages via `@sveltejs/adapter-cloudflare`               |
-| API                | SvelteKit server routes, running on Workers                       |
-| Database           | Cloudflare D1                                                     |
-| Images             | Cloudflare R2                                                     |
-| Push notifications | Web Push with VAPID, implemented on WebCrypto                     |
-| Scheduled jobs     | Companion Worker with a cron trigger (`workers/cron`)             |
-| PWA                | SvelteKit service worker and a per-device `/manifest.webmanifest` |
+| Layer              | Technology                                                                   |
+| ------------------ | ---------------------------------------------------------------------------- |
+| Frontend           | SvelteKit (Svelte 5, runes)                                                  |
+| Hosting            | One Cloudflare Worker with static assets, via `@sveltejs/adapter-cloudflare` |
+| API                | SvelteKit server routes                                                      |
+| Database           | Cloudflare D1                                                                |
+| Images             | Cloudflare R2 for storage, Cloudflare Images for assembling the corpse       |
+| Push notifications | Web Push with VAPID, implemented on WebCrypto                                |
+| Scheduled jobs     | Cron trigger on the same Worker                                              |
+| PWA                | SvelteKit service worker and a per-device `/manifest.webmanifest`            |
 
 ### How the pieces fit
 
 ```
-Browser ──► Pages (SvelteKit) ──► D1  (corpses, sections, subscriptions)
-                    │         └─► R2  (section images, overlap strips, assembled image)
-                    └─ Web Push ─► browser push services
-
-Cron Worker (hourly) ──► same D1 ──► reminders, expiry, Web Push
+Browser ──► Worker ── fetch: SvelteKit ──► D1      (corpses, sections, subscriptions)
+              │                       ├──► R2      (section images, overlap strips, assembled image)
+              │                       ├──► Images  (stacks the three sections into one WebP)
+              │                       └──► Web Push services
+              └────── scheduled (hourly) ──► reminders, expiry, Web Push
 ```
 
-Cloudflare Pages has no cron triggers, so the hourly reminder job lives in a small separate Worker (`workers/cron`). It binds the same D1 database and imports the same server modules from `src/lib/server`.
+The adapter writes its worker to `.svelte-kit/cloudflare/_worker.js`. `workers/app.ts` is the real entry: it reuses that worker's `fetch` and adds a `scheduled` handler for the hourly job. Because the adapter writes to whatever `main` its Wrangler config names, it reads a small separate config (`wrangler.adapter.toml`), while `wrangler.toml` holds the deployable Worker. The generated worker is imported through the `sveltekit-worker` alias, so TypeScript doesn't check the generated bundle.
 
 ## Local development
 
@@ -38,7 +38,7 @@ npm install
 
 # 1. VAPID keys for Web Push
 npm run vapid
-#   Put VAPID_PUBLIC_KEY into [vars] in wrangler.toml and workers/cron/wrangler.toml.
+#   Put VAPID_PUBLIC_KEY into [vars] in wrangler.toml.
 #   Put the private key in .dev.vars:
 cp .dev.vars.example .dev.vars   # then paste VAPID_PRIVATE_KEY=...
 
@@ -49,13 +49,13 @@ npm run db:migrate:local
 npm run dev
 ```
 
-`vite dev` uses Wrangler's platform proxy, so `platform.env.DB` and `platform.env.BUCKET` are backed by local D1 and R2 simulators. The camera needs a secure context: `localhost` works, but to test on a phone over your LAN use an HTTPS tunnel such as `cloudflared tunnel --url http://localhost:5173`.
+`vite dev` uses Wrangler's platform proxy, so `platform.env.DB` and `platform.env.BUCKET` are backed by local D1 and R2 simulators. The Images binding is `remote = true`, so dev uses the real service: the offline emulation ignores `draw()` and would store a corpse with only its head. This needs `wrangler login`, and each completed corpse counts as one transformation. The camera needs a secure context: `localhost` works, but to test on a phone over your LAN use an HTTPS tunnel such as `cloudflared tunnel --url http://localhost:5173`.
 
 ### Reminders and push locally
 
 ```sh
-npm run cron:dev                     # cron Worker on :8799, sharing local D1
-curl "http://localhost:8799/__scheduled?cron=0+*+*+*+*"   # trigger a run
+npm run preview                      # build, then run the real Worker on :8787
+curl "http://localhost:8787/__scheduled?cron=0+*+*+*+*"   # trigger a cron run
 ```
 
 `scripts/push-sink.mjs` is a stand-in push service. It prints a subscription (endpoint and keys) you can insert into `push_subscriptions` in the local database, then decrypts and logs every notification it receives:
@@ -77,28 +77,25 @@ npm run lint    # Prettier
 ```sh
 npx wrangler login
 
-# D1: copy the printed database_id into BOTH wrangler.toml and workers/cron/wrangler.toml
-npx wrangler d1 create corpse-club
+# D1: copy the printed database_id into wrangler.toml
+npx wrangler d1 create corpse-club --location weur
 npm run db:migrate:remote
 
-# R2
-npx wrangler r2 bucket create corpse-club-images
+# R2 (enable R2 in the dashboard first)
+npx wrangler r2 bucket create corpse-club-images --location weur
 
-# Pages project (first time only)
-npx wrangler pages project create corpse-club --production-branch main
+# Ship it (builds, then deploys the Worker with its assets and cron trigger)
+npm run deploy
 
-# Secrets: the same VAPID private key for the app and the cron Worker
-npx wrangler pages secret put VAPID_PRIVATE_KEY
-npx wrangler secret put VAPID_PRIVATE_KEY --config workers/cron/wrangler.toml
-
-# Ship it
-npm run deploy        # builds and deploys the Pages app
-npm run cron:deploy   # deploys the hourly cron Worker
+# Secret: the VAPID private key
+npx wrangler secret put VAPID_PRIVATE_KEY
 ```
 
-Also update `VAPID_SUBJECT` in both Wrangler configs to a `mailto:` or `https:` address you control. Push services use it to contact you.
+Also set `VAPID_SUBJECT` in `wrangler.toml` to a `mailto:` or `https:` address you control. Push services use it to contact you.
 
-If you connect the GitHub repository to Pages for automatic builds, use `npm run build` as the build command and `.svelte-kit/cloudflare` as the output directory. Bindings come from `wrangler.toml`. Set `VAPID_PRIVATE_KEY` as an encrypted variable in the dashboard.
+Cloudflare Images needs no setup: the Free plan allows 5,000 unique transformations a month, and each completed corpse uses one. Beyond that, new transformations fail (no charge), and the app falls back to the browser upload described under Images.
+
+For automatic deploys, connect the repository with [Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/), using `npm run build` as the build command and `npx wrangler deploy` as the deploy command.
 
 ### Rate limiting
 
@@ -126,7 +123,7 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 - Sections are normalised to 1000×750 in the browser, with the bottom 60 px as the overlap strip. They are encoded as WebP, or JPEG on Safari, which cannot encode WebP from a canvas. Typical uploads are well under the 2 MB limit.
 - The server checks the declared content type, the magic bytes, and the size.
 - Paper photos are cropped to the framing guide, can be panned, scaled and tilted, and are optionally "bleached": per-channel levels push the paper to white and the ink to black.
-- **Assembly**: Workers have no canvas, so the first participant to view the reveal composites the three sections in their browser and uploads `corpses/{id}/assembled.webp` once. Until that happens, `GET /api/corpse/[id]/image` builds an SVG on the fly that stacks the three sections. Downloads are composited client-side as PNG.
+- **Assembly**: when section III is sealed, the Worker stacks the three sections into a single 1000×2250 WebP with the Images binding and stores it as `corpses/{id}/assembled` (`src/lib/server/assemble.ts`). `GET /api/corpse/[id]/image` retries if that failed. If Images is unavailable (for example over the free quota), the first participant to view the reveal composites the sections in their browser and uploads them once. Until then, the endpoint serves an SVG that stacks the three sections. Downloads are composited client-side as PNG.
 
 ### Camera overlay
 
@@ -193,12 +190,13 @@ src/
   service-worker.ts    app shell cache, push, notification clicks
   lib/
     components/        DrawingCanvas, CameraCapture, ImageAdjust, Reveal, ...
-    server/            D1 access, Web Push, notifications, reminders (shared with the cron Worker)
+    server/            D1 access, Web Push, notifications, reminders, Images assembly
     image.ts           client-side encoding, cropping, bleaching, assembly
   routes/              pages and API routes
 static/                icons
-workers/cron/          hourly reminder and expiry Worker
-wrangler.toml          Pages config: D1, R2, vars
+workers/app.ts         Worker entry: SvelteKit fetch plus the hourly cron
+wrangler.toml          Worker config: assets, cron, D1, R2, Images, vars
+wrangler.adapter.toml  tells the adapter where to write its build
 ```
 
 ## Scripts
@@ -207,10 +205,8 @@ wrangler.toml          Pages config: D1, R2, vars
 | --------------------------- | ---------------------------------------------------- |
 | `npm run dev`               | Dev server with local D1 and R2                      |
 | `npm run build`             | Production build into `.svelte-kit/cloudflare`       |
-| `npm run preview`           | Build, then serve with `wrangler pages dev`          |
-| `npm run deploy`            | Build and deploy to Cloudflare Pages                 |
-| `npm run cron:dev`          | Run the cron Worker locally against local D1         |
-| `npm run cron:deploy`       | Deploy the cron Worker                               |
+| `npm run preview`           | Build, then run the Worker with `wrangler dev`       |
+| `npm run deploy`            | Build and deploy the Worker                          |
 | `npm run db:migrate:local`  | Apply migrations locally                             |
 | `npm run db:migrate:remote` | Apply migrations to the production D1                |
 | `npm run vapid`             | Generate a VAPID key pair                            |

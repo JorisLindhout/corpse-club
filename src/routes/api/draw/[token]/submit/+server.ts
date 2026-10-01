@@ -3,6 +3,7 @@ import { ROMAN, SECTION_COUNT, isUuid } from '$lib/constants';
 import { completeSection, drawState, getByToken } from '$lib/server/repo';
 import { getEnv, overlapKey, rateLimit, readImage, sanitizeName } from '$lib/server/http';
 import { summon } from '$lib/server/notify';
+import { assembleCorpse } from '$lib/server/assemble';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async (event) => {
@@ -47,6 +48,13 @@ export const POST: RequestHandler = async (event) => {
 	if (!sealed) error(409, 'This section has already been drawn');
 
 	const ctx = event.platform?.ctx;
+	if (corpseComplete) {
+		const keys = sections.map((s) => (s.id === section.id ? imageKey : s.image_key));
+		const assembling = assembleCorpse(env, corpse.id, keys);
+		if (ctx) ctx.waitUntil(assembling);
+		else await assembling;
+	}
+
 	const notifications = corpseComplete
 		? summon(env, corpse.id, {
 				title: 'The corpse is complete',

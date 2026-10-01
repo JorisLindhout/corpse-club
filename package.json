@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"preview": "npm run build && wrangler pages dev",
+		"preview": "npm run build && wrangler dev --test-scheduled",
 		"prepare": "svelte-kit sync || echo \"\"",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -16,9 +16,7 @@
 		"format": "prettier --write .",
 		"db:migrate:local": "wrangler d1 migrations apply corpse-club --local",
 		"db:migrate:remote": "wrangler d1 migrations apply corpse-club --remote",
-		"deploy": "npm run build && wrangler pages deploy",
-		"cron:dev": "cp .dev.vars workers/cron/.dev.vars && wrangler dev --config workers/cron/wrangler.toml --test-scheduled --persist-to .wrangler/state --port 8799",
-		"cron:deploy": "wrangler deploy --config workers/cron/wrangler.toml",
+		"deploy": "npm run build && wrangler deploy",
 		"vapid": "node scripts/generate-vapid.mjs",
 		"icons": "node scripts/generate-icons.mjs"
 	},

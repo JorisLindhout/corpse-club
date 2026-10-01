@@ -2,9 +2,8 @@ import { error, json } from '@sveltejs/kit';
 import { SECTION_HEIGHT, SECTION_WIDTH, isUuid } from '$lib/constants';
 import { getCorpse, isParticipant } from '$lib/server/repo';
 import { getEnv, objectResponse, rateLimit, readImage } from '$lib/server/http';
+import { assembleCorpse, assembledKey } from '$lib/server/assemble';
 import type { RequestHandler } from './$types';
-
-const assembledKey = (id: string) => `corpses/${id}/assembled`;
 
 async function loadComplete(event: Parameters<RequestHandler>[0]) {
 	const { id } = event.params;
@@ -24,14 +23,26 @@ function toBase64(bytes: ArrayBuffer): string {
 }
 
 /**
- * Serves the assembled corpse. Uses the raster uploaded by a participant's
- * browser when available, otherwise stacks the sections into an SVG on the fly.
+ * Serves the assembled corpse: the stored WebP, assembling it first if needed.
+ * If Images is unavailable and no browser has uploaded one yet, the sections
+ * are stacked into an SVG on the fly.
  */
 export const GET: RequestHandler = async (event) => {
 	const { corpse, sections } = await loadComplete(event);
-	const { BUCKET } = getEnv(event);
+	const env = getEnv(event);
+	const { BUCKET } = env;
 
-	const stored = await BUCKET.get(assembledKey(corpse.id));
+	let stored = await BUCKET.get(assembledKey(corpse.id));
+	if (
+		!stored &&
+		(await assembleCorpse(
+			env,
+			corpse.id,
+			sections.map((s) => s.image_key)
+		))
+	) {
+		stored = await BUCKET.get(assembledKey(corpse.id));
+	}
 	if (stored) return objectResponse(stored, true);
 
 	const parts = await Promise.all(
