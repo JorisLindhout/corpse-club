@@ -9,8 +9,11 @@ declare global {
 			cf?: IncomingRequestCfProperties;
 		}
 
+		interface Locals {
+			deviceId: string;
+		}
+
 		// interface Error {}
-		// interface Locals {}
 		// interface PageData {}
 		// interface PageState {}
 	}
