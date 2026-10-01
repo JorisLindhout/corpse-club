@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { SECTION_COUNT, isUuid } from '$lib/constants';
+import { SECTION_COUNT, SECTION_LABELS, isUuid } from '$lib/constants';
 import { completeSection, drawState, getByToken } from '$lib/server/repo';
 import { getEnv, overlapKey, rateLimit, readImage, sanitizeName } from '$lib/server/http';
 import { summon } from '$lib/server/notify';
@@ -55,20 +55,26 @@ export const POST: RequestHandler = async (event) => {
 		else await assembling;
 	}
 
-	if (corpseComplete) {
-		const settled = summon(
-			env,
-			corpse.id,
-			{
-				title: 'The corpse is complete',
-				body: 'Three hands. One creature. Come and look.',
-				url: `/c/${corpse.id}`
-			},
-			{ excludeDeviceId: deviceId }
-		).catch((e) => console.error('push failed', e));
-		if (ctx) ctx.waitUntil(settled);
-		else await settled;
-	}
+	const part = SECTION_LABELS[section.position - 1].toLowerCase();
+	const nextPart = SECTION_LABELS[section.position]?.toLowerCase();
+	const settled = summon(
+		env,
+		corpse.id,
+		corpseComplete
+			? {
+					title: 'The corpse is complete',
+					body: 'Three hands. One creature. Come and look.',
+					url: `/c/${corpse.id}`
+				}
+			: {
+					title: `${part[0].toUpperCase()}${part.slice(1)} is drawn`,
+					body: `${contributorName ?? 'A hand'} drew ${part}. Now for ${nextPart}.`,
+					url: `/c/${corpse.id}/status`
+				},
+		{ excludeDeviceId: deviceId }
+	).catch((e) => console.error('push failed', e));
+	if (ctx) ctx.waitUntil(settled);
+	else await settled;
 
 	// Like the folded paper, the corpse passes from hand to hand.
 	const next = sections.find((s) => s.position === section.position + 1);

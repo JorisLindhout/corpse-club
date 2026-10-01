@@ -187,8 +187,9 @@ export async function myCorpses(db: D1Database, deviceId: string): Promise<MyCor
 	const { results: corpses } = await db
 		.prepare(
 			`SELECT * FROM corpses
-			 WHERE creator_device_id = ?1
-			    OR id IN (SELECT corpse_id FROM sections WHERE device_id = ?1)
+			 WHERE (creator_device_id = ?1
+			    OR id IN (SELECT corpse_id FROM sections WHERE device_id = ?1))
+			   AND id NOT IN (SELECT corpse_id FROM hidden_corpses WHERE device_id = ?1)
 			 ORDER BY created_at DESC
 			 LIMIT 200`
 		)
@@ -215,6 +216,21 @@ export async function myCorpses(db: D1Database, deviceId: string): Promise<MyCor
 			.filter((s) => s.corpse_id === c.id)
 			.map((s) => ({ position: s.position, status: s.status, name: s.contributor_name }))
 	}));
+}
+
+/** Removes a corpse from this device's collection only. */
+export async function hideCorpse(
+	db: D1Database,
+	deviceId: string,
+	corpseId: string
+): Promise<void> {
+	await db
+		.prepare(
+			`INSERT OR IGNORE INTO hidden_corpses (device_id, corpse_id, hidden_at)
+			 SELECT ?1, id, ?3 FROM corpses WHERE id = ?2`
+		)
+		.bind(deviceId, corpseId, Date.now())
+		.run();
 }
 
 export interface SubscriptionRow {

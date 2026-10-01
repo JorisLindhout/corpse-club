@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { SECTION_HEIGHT, SECTION_WIDTH, SECTION_COUNT } from '$lib/constants';
 	import { adoptDevice } from '$lib/device';
 	import { refreshSubscription } from '$lib/push';
+	import type { SubmitFunction } from '@sveltejs/kit';
 
 	let { data } = $props();
 
@@ -45,6 +47,10 @@
 		await refreshSubscription().catch(() => false);
 		await invalidateAll();
 	}
+
+	const confirmRemove: SubmitFunction = ({ cancel }) => {
+		if (!confirm('Remove this corpse from your collection? The other hands keep theirs.')) cancel();
+	};
 </script>
 
 <svelte:head>
@@ -86,6 +92,10 @@
 							<span class="small">{hands(corpse.sections)}</span>
 						</div>
 					</a>
+					<form method="POST" action="?/remove" use:enhance={confirmRemove}>
+						<input type="hidden" name="id" value={corpse.id} />
+						<button class="remove label" type="submit">Remove</button>
+					</form>
 				</li>
 			{/each}
 		</ul>
@@ -138,6 +148,11 @@
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
 		gap: 1rem;
+	}
+
+	.grid li {
+		display: grid;
+		grid-template-rows: 1fr auto;
 	}
 
 	.tile {
@@ -210,6 +225,21 @@
 	.expired .status {
 		color: var(--gray);
 		text-decoration: line-through;
+	}
+
+	.remove {
+		min-height: 2.75rem;
+		padding: 0;
+		border: 0;
+		background: none;
+		font-family: inherit;
+		cursor: pointer;
+		transition: color 120ms linear;
+	}
+
+	.remove:hover,
+	.remove:active {
+		color: var(--crimson);
 	}
 
 	.small {

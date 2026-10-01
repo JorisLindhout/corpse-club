@@ -107,7 +107,7 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 
 1. **Summon** (`POST /create`): creates a corpse and three sections, each with its own `crypto.randomUUID()` invite token, then redirects the creator to `/draw/<token-1>`.
 2. **Draw**: on paper with the camera (primary) or on screen (fallback). There is no photo upload: only the live camera overlay and the on-screen canvas show the previous edge while drawing, so lines can meet.
-3. **Seal** (`POST /api/draw/[token]/submit`): uploads the section and, for sections I and II, a separate image of just its bottom strip. Whoever sealed it gets the next invite link and the native share sheet.
+3. **Seal** (`POST /api/draw/[token]/submit`): uploads the section and, for sections I and II, a separate image of just its bottom strip. Whoever sealed it gets the next invite link and the native share sheet. Earlier participants who subscribed are told which part was drawn and which comes next.
 4. **Pass on**: the next hand opens the link and sees only the strip. When they seal, they get the last invite link and pass it on, like the folded paper.
 5. **Reveal**: when section III is sealed, every subscribed participant is summoned to `/c/<id>`.
 
@@ -145,6 +145,7 @@ Home Screen apps on iOS don't share storage with Safari. To carry the device ID 
 
 Notifications are sent when:
 
+- a part is sealed: to every subscribed participant except the hand who sealed it, saying who drew it and which part is next
 - the corpse is complete: to every participant who has subscribed, except the hand who just unfolded it
 - a reminder is due: to the creator and the previous hand, 48 hours after a section becomes drawable and again 24 hours later
 - a corpse expires: to the creator and the previous hand, 24 hours after the second reminder

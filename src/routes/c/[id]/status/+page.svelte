@@ -66,7 +66,7 @@
 			vapidPublicKey={data.vapidPublicKey}
 			deviceId={data.deviceId}
 			reachable={data.reachable}
-			reason="Be summoned when the corpse is complete."
+			reason="Be summoned as each part is drawn, and when the corpse is complete."
 		/>
 	{:else}
 		<form method="POST" action="/create">

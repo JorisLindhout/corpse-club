@@ -197,7 +197,7 @@
 					vapidPublicKey={data.vapidPublicKey}
 					deviceId={data.deviceId}
 					reachable={data.reachable}
-					reason="Be summoned when the corpse is complete."
+					reason="Be summoned as each part is drawn, and when the corpse is complete."
 				/>
 				<a class="btn ghost block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
 					Watch over the corpse
