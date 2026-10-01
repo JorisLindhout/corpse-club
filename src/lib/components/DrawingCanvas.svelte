@@ -181,7 +181,7 @@
 </script>
 
 <div class="stage">
-	<header>
+	<header class="stage-bar">
 		<button class="btn ghost" type="button" onclick={oncancel}>Back</button>
 		<span class="label">{title}</span>
 		<button class="btn ghost" type="button" onclick={undo} disabled={!undoable}>Undo</button>
@@ -278,24 +278,6 @@
 </div>
 
 <style>
-	.stage {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: grid;
-		grid-template-rows: auto 1fr auto;
-		background: var(--black);
-		padding: var(--safe-top) 0 var(--safe-bottom);
-	}
-
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 0.25rem;
-		border-bottom: 1px solid #1a1a1a;
-	}
-
 	.wrap {
 		position: relative;
 		min-height: 0;
@@ -339,8 +321,8 @@
 	}
 
 	.zone span {
-		font-size: 0.6rem;
-		letter-spacing: 0.2em;
+		font-size: var(--text-xs);
+		letter-spacing: var(--tracking);
 		text-transform: uppercase;
 		color: var(--crimson);
 		padding: 0.15rem 0.35rem;
@@ -351,7 +333,7 @@
 		display: grid;
 		gap: 0.5rem;
 		padding: 0.5rem var(--pad) 1rem;
-		border-top: 1px solid #1a1a1a;
+		border-top: var(--line-faint);
 	}
 
 	.tools {
@@ -416,7 +398,7 @@
 		height: 1.6rem;
 		border-radius: 50%;
 		background: var(--swatch);
-		box-shadow: inset 0 0 0 1px rgb(240 237 230 / 0.18);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bone) 18%, transparent);
 	}
 
 	.custom::before {

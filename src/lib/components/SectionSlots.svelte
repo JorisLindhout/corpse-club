@@ -53,7 +53,7 @@
 	}
 
 	li + li {
-		border-top: 1px solid #1a1a1a;
+		border-top: var(--line-faint);
 	}
 
 	.numeral {
@@ -70,7 +70,7 @@
 	}
 
 	.state {
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		color: var(--gray);
 	}
 

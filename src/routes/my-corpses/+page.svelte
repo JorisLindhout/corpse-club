@@ -188,12 +188,12 @@
 	}
 
 	.slot {
-		border: 1px solid #333;
+		border: 1px solid var(--ash);
 		margin-bottom: -1px;
 	}
 
 	.slot.complete {
-		background: repeating-linear-gradient(135deg, #222 0 2px, transparent 2px 7px);
+		background: repeating-linear-gradient(135deg, var(--ash) 0 2px, transparent 2px 7px);
 		border-color: var(--gray);
 	}
 
@@ -213,8 +213,8 @@
 
 	.status {
 		font-weight: 600;
-		font-size: 0.75rem;
-		letter-spacing: 0.22em;
+		font-size: var(--text-xs);
+		letter-spacing: var(--tracking);
 		text-transform: uppercase;
 	}
 
@@ -243,14 +243,14 @@
 	}
 
 	.small {
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		overflow-wrap: anywhere;
 	}
 
 	.mark {
 		display: grid;
 		gap: 1rem;
-		border-top: 1px solid #1a1a1a;
+		border-top: var(--line-faint);
 		padding-top: 1.5rem;
 	}
 

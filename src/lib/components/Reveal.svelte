@@ -163,7 +163,7 @@
 		height: 2.5rem;
 		padding: 0;
 		border: var(--line);
-		background: rgb(0 0 0 / 0.7);
+		background: var(--scrim);
 		color: var(--bone);
 		cursor: pointer;
 		transition:

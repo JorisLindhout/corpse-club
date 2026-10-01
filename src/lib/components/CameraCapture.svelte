@@ -153,7 +153,7 @@
 		{/if}
 	{/if}
 
-	<header>
+	<header class="stage-bar">
 		<button class="btn ghost" type="button" onclick={oncancel}>Back</button>
 		<span class="label">{title}</span>
 		<span class="spacer"></span>
@@ -196,11 +196,10 @@
 </div>
 
 <style>
+	/* Everything floats over the live video, so the shared grid is switched off. */
 	.stage {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		background: var(--black);
+		display: block;
+		padding: 0;
 		overflow: hidden;
 	}
 
@@ -215,8 +214,8 @@
 	.guide {
 		position: absolute;
 		/* Hard-edged mask darkening everything outside the frame. */
-		box-shadow: 0 0 0 200vmax rgb(0 0 0 / 0.6);
-		outline: 1px solid rgb(240 237 230 / 0.5);
+		box-shadow: 0 0 0 200vmax var(--scrim);
+		outline: 1px solid color-mix(in srgb, var(--bone) 50%, transparent);
 	}
 
 	.corner {
@@ -279,16 +278,8 @@
 	header {
 		position: absolute;
 		inset: 0 0 auto;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: var(--safe-top) 0.25rem 0;
+		padding-top: var(--safe-top);
 		background: var(--black);
-		border-bottom: 1px solid #1a1a1a;
-	}
-
-	.spacer {
-		width: 5rem;
 	}
 
 	.hint {
@@ -296,7 +287,7 @@
 		top: calc(var(--safe-top) + 3.75rem);
 		inset-inline: var(--pad);
 		text-align: center;
-		font-size: 0.82rem;
+		font-size: var(--text-sm);
 		color: var(--bone);
 	}
 

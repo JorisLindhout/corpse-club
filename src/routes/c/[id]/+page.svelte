@@ -168,7 +168,7 @@
 	}
 
 	.hands li + li {
-		border-top: 1px solid #1a1a1a;
+		border-top: var(--line-faint);
 	}
 
 	.numeral {
@@ -186,6 +186,6 @@
 	.feedback {
 		min-height: 1.5em;
 		text-align: center;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 	}
 </style>

@@ -160,7 +160,7 @@
 
 {#if step !== 'camera' && step !== 'canvas' && step !== 'adjust'}
 	<div class="page">
-		<header class="top">
+		<header class="masthead">
 			<a href={resolve('/')} class="wordmark">Corpse Club</a>
 		</header>
 
@@ -341,20 +341,6 @@
 		display: flex;
 		flex-direction: column;
 		padding: var(--safe-top) 0 var(--safe-bottom);
-	}
-
-	.top {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		height: 3.5rem;
-		border-bottom: 1px solid #1a1a1a;
-	}
-
-	.wordmark {
-		font-family: var(--font-display);
-		font-size: 1.6rem;
-		text-decoration: none;
 	}
 
 	.content {

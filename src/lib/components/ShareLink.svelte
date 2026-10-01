@@ -51,14 +51,14 @@
 		background: transparent;
 		color: var(--bone);
 		font: inherit;
-		font-size: 0.8rem;
+		font-size: var(--text-sm);
 		font-family: ui-monospace, 'SF Mono', Menlo, monospace;
 		text-overflow: ellipsis;
 	}
 
 	.feedback {
 		min-height: 1.5em;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 		text-align: center;
 	}
 </style>

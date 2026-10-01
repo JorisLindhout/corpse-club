@@ -107,7 +107,7 @@
 
 <div class="app" class:immersive>
 	{#if !immersive && !home}
-		<header class="top">
+		<header class="masthead">
 			<a href={resolve('/')} class="wordmark">Corpse Club</a>
 		</header>
 	{/if}
@@ -159,25 +159,10 @@
 		flex-direction: column;
 	}
 
-	.top {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		height: var(--header-height);
-		border-bottom: 1px solid #1a1a1a;
-	}
-
-	.wordmark {
-		font-family: var(--font-display);
-		font-size: 1.6rem;
-		text-decoration: none;
-		letter-spacing: 0.02em;
-	}
-
 	.bottom {
 		position: fixed;
 		inset: auto 0 0;
-		z-index: 50;
+		z-index: var(--z-nav);
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		height: calc(var(--nav-height) + var(--safe-bottom));
@@ -200,17 +185,17 @@
 		background: transparent;
 		color: var(--gray);
 		font: inherit;
-		font-size: 0.68rem;
+		font-size: var(--text-xs);
 		font-weight: 600;
 		font-stretch: 75%;
-		letter-spacing: 0.24em;
+		letter-spacing: var(--tracking);
 		text-transform: uppercase;
 		text-decoration: none;
 		cursor: pointer;
 	}
 
 	form + .tab {
-		border-left: 1px solid #222;
+		border-left: var(--line-faint);
 	}
 
 	.tab:hover,

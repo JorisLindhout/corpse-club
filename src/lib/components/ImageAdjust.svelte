@@ -113,7 +113,7 @@
 </script>
 
 <div class="stage">
-	<header>
+	<header class="stage-bar">
 		<button class="btn ghost" type="button" onclick={onretake}>Retake</button>
 		<span class="label">{title}</span>
 		<span class="spacer"></span>
@@ -166,26 +166,7 @@
 
 <style>
 	.stage {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: grid;
-		grid-template-rows: auto 1fr auto;
-		background: var(--black);
-		padding: var(--safe-top) 0 var(--safe-bottom);
 		overflow-y: auto;
-	}
-
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 0 0.25rem;
-		border-bottom: 1px solid #1a1a1a;
-	}
-
-	.spacer {
-		width: 5rem;
 	}
 
 	.body {
@@ -200,7 +181,7 @@
 
 	.hint {
 		text-align: center;
-		font-size: 0.85rem;
+		font-size: var(--text-sm);
 	}
 
 	.frame {
