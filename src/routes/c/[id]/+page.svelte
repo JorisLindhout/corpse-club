@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { ROMAN, SECTION_COUNT } from '$lib/constants';
@@ -104,22 +105,24 @@
 			{onrevealed}
 		/>
 
-		<div class="meta" class:shown={revealed}>
-			<p class="label">{completed}</p>
-			<ol class="hands">
-				{#each names as name, i (i)}
-					<li><span class="numeral">{ROMAN[i]}</span>{name}</li>
-				{/each}
-			</ol>
-			<div class="actions">
-				<button class="btn solid" type="button" onclick={download} disabled={busy}>
-					{busy ? 'Exhuming...' : 'Download'}
-				</button>
-				<button class="btn" type="button" onclick={share}>Share</button>
+		{#if revealed}
+			<div class="meta" in:fade={{ duration: 400 }}>
+				<p class="label">{completed}</p>
+				<ol class="hands">
+					{#each names as name, i (i)}
+						<li><span class="numeral">{ROMAN[i]}</span>{name}</li>
+					{/each}
+				</ol>
+				<div class="actions">
+					<button class="btn solid" type="button" onclick={download} disabled={busy}>
+						{busy ? 'Exhuming...' : 'Download'}
+					</button>
+					<button class="btn" type="button" onclick={share}>Share</button>
+				</div>
+				<p class="muted feedback" aria-live="polite">{feedback}</p>
+				<a class="btn ghost block" href={resolve('/my-corpses')}>My corpses</a>
 			</div>
-			<p class="muted feedback" aria-live="polite">{feedback}</p>
-			<a class="btn ghost block" href={resolve('/my-corpses')}>My corpses</a>
-		</div>
+		{/if}
 	</article>
 {/if}
 
@@ -130,6 +133,12 @@
 		width: 100%;
 		margin: 0 auto;
 		padding: var(--pad);
+	}
+
+	article {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
 	}
 
 	.rotted {
@@ -143,12 +152,6 @@
 		display: grid;
 		gap: 1.25rem;
 		padding-top: 1.75rem;
-		opacity: 0;
-		transition: opacity 400ms linear;
-	}
-
-	.meta.shown {
-		opacity: 1;
 	}
 
 	.hands {

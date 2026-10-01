@@ -27,8 +27,8 @@
 				</span>
 			</span>
 			{#if slot.status === 'complete'}
-				<svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
-					<path d="M2.5 8.5 L6.5 12.5 L13.5 3.5" />
+				<svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M12 3v18M7.5 15.5h9" />
 				</svg>
 			{:else}
 				<span class="mark" aria-hidden="true"></span>
@@ -86,9 +86,8 @@
 		border: 0;
 		fill: none;
 		stroke: var(--bone);
-		stroke-width: 1.75;
-		stroke-linecap: round;
-		stroke-linejoin: round;
+		stroke-width: 1.5;
+		stroke-linecap: square;
 	}
 
 	.active .numeral,

@@ -102,7 +102,7 @@
 				aria-current={page.route.id === '/my-corpses' ? 'page' : undefined}
 			>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
-					<path d="M4 3.5h7v7H4zM13 3.5h7v7h-7zM4 13.5h7v7H4zM13 13.5h7v7h-7z" />
+					<path d="M6 21v-9M4 18h4M12 21V4M9.5 17h5M18 21v-9M16 18h4M2.5 21h19" />
 				</svg>
 				<span>My corpses</span>
 			</a>
@@ -133,7 +133,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		height: 3.5rem;
+		height: var(--header-height);
 		border-bottom: 1px solid #1a1a1a;
 	}
 
