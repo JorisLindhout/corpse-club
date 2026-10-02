@@ -51,8 +51,8 @@
 		</li>
 	</ol>
 	<p class="muted small">
-		A share button on this page only sends the link and cannot do this. If your corpses do not
-		follow you into the app, copy your mark and adopt it under My corpses there.
+		If your corpses do not follow you into the app, copy your mark and adopt it under My corpses
+		there.
 	</p>
 	<button class="btn block" type="button" onclick={() => copy('mark')}>
 		{copied === 'mark' ? 'Mark copied' : 'Copy your mark'}
