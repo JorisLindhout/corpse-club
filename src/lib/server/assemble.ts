@@ -1,4 +1,4 @@
-import { SECTION_HEIGHT, SECTION_WIDTH } from '../constants';
+import { PAPER, SECTION_HEIGHT, SECTION_WIDTH } from '../constants';
 
 export const assembledKey = (id: string) => `corpses/${id}/assembled`;
 
@@ -30,7 +30,7 @@ export async function assembleCorpse(
 			width: SECTION_WIDTH,
 			height: SECTION_HEIGHT * parts.length,
 			fit: 'pad',
-			background: '#FFFFFF'
+			background: PAPER
 		});
 		parts.forEach((bytes, i) => {
 			const section = env.IMAGES.input(stream(bytes)).transform({

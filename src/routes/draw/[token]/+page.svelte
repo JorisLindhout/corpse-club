@@ -24,7 +24,7 @@
 
 	const NAME_KEY = 'cc_name';
 	const ORDINALS = ['first', 'second', 'third'];
-	/** On clean white paper, even one faint pencil line counts as a line to continue. */
+	/** On clean screen paper, even one faint pencil line counts as a line to continue. */
 	const SCREEN_INK = { contrast: 20, share: 0.0005 };
 
 	type Step = 'intro' | 'camera' | 'canvas' | 'adjust' | 'review' | 'sending' | 'sealed';

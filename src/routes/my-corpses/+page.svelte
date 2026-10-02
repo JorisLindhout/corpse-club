@@ -185,7 +185,7 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		background: var(--white);
+		background: var(--paper);
 	}
 
 	.slot {

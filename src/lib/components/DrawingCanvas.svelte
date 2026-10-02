@@ -1,13 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { OVERLAP_HEIGHT, SECTION_HEIGHT, SECTION_WIDTH } from '$lib/constants';
+	import { OVERLAP_HEIGHT, PAPER, SECTION_HEIGHT, SECTION_WIDTH } from '$lib/constants';
 	import { createCanvas } from '$lib/image';
 	import {
 		addPoint,
 		clamp,
 		Dynamics,
 		paintStroke,
-		PAPER,
 		StrokePainter,
 		tiltAngles,
 		type Point,

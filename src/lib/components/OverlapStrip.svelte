@@ -21,7 +21,7 @@
 	.torn {
 		position: relative;
 		width: 100%;
-		background: var(--white);
+		background: var(--paper);
 		/* Ragged top edge: a strip torn from the bottom of someone else's page. */
 		clip-path: polygon(
 			0% 18%,

@@ -6,7 +6,8 @@
  * tapering is added.
  */
 
-export const PAPER = '#ffffff';
+import { PAPER } from './constants';
+
 /** The darkest graphite gets, however often a spot is gone over. */
 export const GRAPHITE = '#262626';
 

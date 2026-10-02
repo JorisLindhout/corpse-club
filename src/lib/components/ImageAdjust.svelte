@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { OVERLAP_HEIGHT, SECTION_HEIGHT, SECTION_WIDTH } from '$lib/constants';
-	import { bleach, createCanvas } from '$lib/image';
+	import { createCanvas, DEFAULT_INK, developPhoto } from '$lib/image';
 	import type { Crop } from './CameraCapture.svelte';
 
 	let {
@@ -31,7 +31,8 @@
 	let centerY = $state(initial.y + initial.h / 2);
 	let cropWidth = $state(initial.w);
 	let rotation = $state(0);
-	let bleached = $state(true);
+	let ink = $state(DEFAULT_INK);
+	let inkLabel = $derived(ink < 0.34 ? 'soft' : ink < 0.67 ? 'even' : 'crisp');
 
 	let preview: HTMLCanvasElement;
 	const pointers = new Map<number, { x: number; y: number }>();
@@ -43,8 +44,7 @@
 		const ctx = target.getContext('2d', { willReadFrequently: true })!;
 		const { width, height } = target;
 		ctx.save();
-		ctx.fillStyle = '#ffffff';
-		ctx.fillRect(0, 0, width, height);
+		ctx.clearRect(0, 0, width, height);
 		const scale = width / cropWidth;
 		ctx.translate(width / 2, height / 2);
 		ctx.rotate((rotation * Math.PI) / 180);
@@ -53,12 +53,12 @@
 		ctx.imageSmoothingQuality = 'high';
 		ctx.drawImage(source, 0, 0);
 		ctx.restore();
-		if (bleached) bleach(ctx, width, height);
+		developPhoto(ctx, width, height, ink);
 	}
 
 	$effect(() => {
-		// Redraw the preview whenever the framing changes.
-		void [centerX, centerY, cropWidth, rotation, bleached];
+		// Redraw the preview whenever the framing or ink changes.
+		void [centerX, centerY, cropWidth, rotation, ink];
 		const frame = requestAnimationFrame(() => draw(preview));
 		return () => cancelAnimationFrame(frame);
 	});
@@ -152,9 +152,9 @@
 				<span class="label">Tilt {rotation > 0 ? '+' : ''}{rotation.toFixed(1)}°</span>
 				<input type="range" min="-15" max="15" step="0.1" bind:value={rotation} />
 			</label>
-			<label class="toggle">
-				<input type="checkbox" bind:checked={bleached} />
-				<span>Bleach the paper</span>
+			<label class="field">
+				<span class="label">Ink · {inkLabel}</span>
+				<input type="range" min="0" max="1" step="0.01" bind:value={ink} />
 			</label>
 		</div>
 	</div>
@@ -213,27 +213,6 @@
 	input[type='range'] {
 		width: 100%;
 		accent-color: var(--bone);
-	}
-
-	.toggle {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		min-height: 2.75rem;
-		cursor: pointer;
-	}
-
-	.toggle input {
-		appearance: none;
-		width: 1.25rem;
-		height: 1.25rem;
-		margin: 0;
-		border: var(--line);
-		background: transparent;
-	}
-
-	.toggle input:checked {
-		background: var(--bone);
 	}
 
 	footer {

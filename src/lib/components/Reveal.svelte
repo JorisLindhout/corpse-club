@@ -191,7 +191,7 @@
 		width: 100%;
 		height: auto;
 		opacity: 0;
-		background: var(--white);
+		background: var(--paper);
 	}
 
 	.revealing img {

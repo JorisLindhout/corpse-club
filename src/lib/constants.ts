@@ -7,6 +7,12 @@ export const SECTION_HEIGHT = 750;
 /** Bottom strip of each section revealed to the next acolyte. */
 export const OVERLAP_HEIGHT = 60;
 
+/**
+ * Screen drawings and developed photos share this paper, so their sections
+ * join without a seam. Matches `--bone` in app.css.
+ */
+export const PAPER = '#f0ede6';
+
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 export const MAX_NAME_LENGTH = 40;
 
