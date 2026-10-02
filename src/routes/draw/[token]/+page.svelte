@@ -24,6 +24,8 @@
 
 	const NAME_KEY = 'cc_name';
 	const ORDINALS = ['first', 'second', 'third'];
+	/** On clean white paper, even one faint pencil line counts as a line to continue. */
+	const SCREEN_INK = { contrast: 20, share: 0.0005 };
 
 	type Step = 'intro' | 'camera' | 'canvas' | 'adjust' | 'review' | 'sending' | 'sealed';
 	type Tool = 'canvas' | 'adjust';
@@ -69,7 +71,7 @@
 	function review(canvas: HTMLCanvasElement, tool: Tool) {
 		section = canvas;
 		drawnWith = tool;
-		bareFold = !data.isLast && !overlapHasInk(canvas);
+		bareFold = !data.isLast && !overlapHasInk(canvas, tool === 'canvas' ? SCREEN_INK : undefined);
 		previewUrl = canvas.toDataURL('image/jpeg', 0.8);
 		open('review');
 	}

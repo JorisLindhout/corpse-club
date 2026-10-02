@@ -2,6 +2,17 @@
 	import { onMount } from 'svelte';
 	import { OVERLAP_HEIGHT, SECTION_HEIGHT, SECTION_WIDTH } from '$lib/constants';
 	import { createCanvas } from '$lib/image';
+	import {
+		addPoint,
+		clamp,
+		Dynamics,
+		paintStroke,
+		PAPER,
+		StrokePainter,
+		type Point,
+		type Sample,
+		type Stroke
+	} from '$lib/pencil';
 	import OverlapStrip from './OverlapStrip.svelte';
 
 	let {
@@ -18,53 +29,61 @@
 		oncancel: () => void;
 	} = $props();
 
-	const PAPER = '#ffffff';
 	const MAX_UNDO = 20;
-	const SMOOTHING = 0.42;
-	const SIZES = [
-		{ id: 'small', width: 4, dot: 5 },
-		{ id: 'medium', width: 10, dot: 9 },
-		{ id: 'large', width: 24, dot: 15 }
-	];
-	// Traditional drawing media, as a surrealist might have had on the table.
-	const PALETTE = [
-		{ name: 'India ink', value: '#161412' },
-		{ name: 'Sanguine', value: '#b5452f' },
-		{ name: 'Prussian blue', value: '#1d3f6e' },
-		{ name: 'Sepia', value: '#6f4a2a' },
-		{ name: 'Ochre', value: '#c8902e' }
+	const MAX_ZOOM = 4;
+	const TIPS = [
+		{ id: 'fine', label: 'Fine tip', width: 3, erase: false },
+		{ id: 'broad', label: 'Broad tip', width: 9, erase: false },
+		{ id: 'eraser', label: 'Eraser', width: 24, erase: true }
 	];
 
-	interface Stroke {
-		color: string;
-		width: number;
-		points: number[];
-	}
-
+	let sheet: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
 	let ctx: CanvasRenderingContext2D;
 	/** Strokes older than the undo window, flattened. */
 	const base = createCanvas(SECTION_WIDTH, SECTION_HEIGHT);
 	/** Base plus undoable strokes. */
 	const committed = createCanvas(SECTION_WIDTH, SECTION_HEIGHT);
+	/** The stroke in progress, as far as it is settled. */
+	const live = createCanvas(SECTION_WIDTH, SECTION_HEIGHT);
+	let liveCtx: CanvasRenderingContext2D;
 	let strokes: Stroke[] = [];
-	let current: Stroke | null = null;
-	let activePointer: number | null = null;
-	let smoothX = 0;
-	let smoothY = 0;
+	let drawing: {
+		pointer: number;
+		kind: string;
+		stroke: Stroke;
+		painter: StrokePainter;
+		dynamics: Dynamics;
+	} | null = null;
+	/** Where the browser expects the finger to be next; shown for one frame, never kept. */
+	let predicted: Point[] = [];
 	let frame = 0;
 
-	let size = $state.raw(SIZES[1]);
-	let color = $state(PALETTE[0].value);
-	let erasing = $state(false);
+	/** Fingers on the sheet, in client pixels. */
+	const touches = new Map<number, { x: number; y: number }>();
+	let pinch: {
+		distance: number;
+		zoom: number;
+		originX: number;
+		originY: number;
+		localX: number;
+		localY: number;
+	} | null = null;
+	/** Once two fingers land, no stroke starts until every finger has lifted. */
+	let gesturing = false;
+
+	let tip = $state.raw(TIPS[0]);
 	let undoable = $state(0);
 	let touched = $state(false);
-	let custom = $derived(!PALETTE.some((swatch) => swatch.value === color));
+	let zoom = $state(1);
+	let panX = $state(0);
+	let panY = $state(0);
 	let wrapWidth = $state(0);
 	let wrapHeight = $state(0);
 
 	let sheetRatio = $derived((SECTION_HEIGHT + (overlapSrc ? OVERLAP_HEIGHT : 0)) / SECTION_WIDTH);
 	let sheetWidth = $derived(Math.max(0, Math.min(wrapWidth, wrapHeight / sheetRatio)));
+	let zoomed = $derived(zoom !== 1 || panX !== 0 || panY !== 0);
 
 	function fill(target: HTMLCanvasElement) {
 		const c = target.getContext('2d')!;
@@ -72,90 +91,176 @@
 		c.fillRect(0, 0, target.width, target.height);
 	}
 
-	function paint(target: CanvasRenderingContext2D, stroke: Stroke) {
-		const p = stroke.points;
-		target.strokeStyle = stroke.color;
-		target.fillStyle = stroke.color;
-		target.lineWidth = stroke.width;
-		target.lineCap = 'round';
-		target.lineJoin = 'round';
-		if (p.length <= 4) {
-			target.beginPath();
-			target.arc(p[0], p[1], stroke.width / 2, 0, Math.PI * 2);
-			target.fill();
-			return;
-		}
-		target.beginPath();
-		target.moveTo(p[0], p[1]);
-		// Quadratic curves through midpoints: smooth joins between samples.
-		for (let i = 2; i < p.length - 2; i += 2) {
-			target.quadraticCurveTo(p[i], p[i + 1], (p[i] + p[i + 2]) / 2, (p[i + 1] + p[i + 3]) / 2);
-		}
-		target.lineTo(p[p.length - 2], p[p.length - 1]);
-		target.stroke();
-	}
-
 	function rebuild() {
 		const c = committed.getContext('2d')!;
 		c.drawImage(base, 0, 0);
-		for (const stroke of strokes) paint(c, stroke);
+		for (const stroke of strokes) paintStroke(c, stroke);
 		render();
 	}
 
 	function render() {
 		frame = 0;
 		ctx.drawImage(committed, 0, 0);
-		if (current) paint(ctx, current);
+		if (drawing) {
+			ctx.drawImage(live, 0, 0);
+			drawing.painter.preview(ctx, predicted);
+		}
 	}
 
 	function schedule() {
 		if (!frame) frame = requestAnimationFrame(render);
 	}
 
-	function toCanvas(e: PointerEvent): [number, number] {
-		const rect = canvas.getBoundingClientRect();
+	function toCanvas(e: PointerEvent, rect: DOMRect): [number, number] {
 		return [
 			((e.clientX - rect.left) / rect.width) * SECTION_WIDTH,
 			((e.clientY - rect.top) / rect.height) * SECTION_HEIGHT
 		];
 	}
 
-	function down(e: PointerEvent & { currentTarget: HTMLElement }) {
-		if (activePointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
-		activePointer = e.pointerId;
-		e.currentTarget.setPointerCapture(e.pointerId);
-		[smoothX, smoothY] = toCanvas(e);
-		current = {
-			color: erasing ? PAPER : color,
-			width: erasing ? size.width * 2 : size.width,
-			points: [smoothX, smoothY]
+	function sample(e: PointerEvent, rect: DOMRect): Sample {
+		const [x, y] = toCanvas(e, rect);
+		return {
+			x,
+			y,
+			screenX: e.clientX,
+			screenY: e.clientY,
+			t: e.timeStamp,
+			pressure: e.pressure,
+			contact: Math.max(e.width, e.height),
+			kind: e.pointerType
 		};
+	}
+
+	function begin(e: PointerEvent) {
+		const stroke: Stroke = { erase: tip.erase, points: [] };
+		const dynamics = new Dynamics(tip);
+		drawing = {
+			pointer: e.pointerId,
+			kind: e.pointerType,
+			stroke,
+			painter: new StrokePainter(stroke),
+			dynamics
+		};
+		liveCtx.clearRect(0, 0, SECTION_WIDTH, SECTION_HEIGHT);
+		addPoint(stroke.points, dynamics.point(sample(e, canvas.getBoundingClientRect())));
 		schedule();
 	}
 
-	function move(e: PointerEvent) {
-		if (e.pointerId !== activePointer || !current) return;
-		const events = e.getCoalescedEvents?.() ?? [e];
-		for (const ev of events.length ? events : [e]) {
-			const [x, y] = toCanvas(ev);
-			smoothX += (x - smoothX) * SMOOTHING;
-			smoothY += (y - smoothY) * SMOOTHING;
-			current.points.push(smoothX, smoothY);
+	function discard() {
+		drawing = null;
+		predicted = [];
+		schedule();
+	}
+
+	function commit() {
+		if (!drawing) return;
+		drawing.painter.finish(liveCtx);
+		strokes.push(drawing.stroke);
+		committed.getContext('2d')!.drawImage(live, 0, 0);
+		if (strokes.length > MAX_UNDO) paintStroke(base.getContext('2d')!, strokes.shift()!);
+		undoable = strokes.length;
+		touched = true;
+		drawing = null;
+		predicted = [];
+		render();
+	}
+
+	function startPinch() {
+		const [a, b] = touches.values();
+		const rect = sheet.getBoundingClientRect();
+		const midX = (a.x + b.x) / 2;
+		const midY = (a.y + b.y) / 2;
+		gesturing = true;
+		pinch = {
+			distance: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+			zoom,
+			originX: rect.left - panX,
+			originY: rect.top - panY,
+			localX: (midX - rect.left) / zoom,
+			localY: (midY - rect.top) / zoom
+		};
+	}
+
+	function movePinch() {
+		if (!pinch) return;
+		const [a, b] = touches.values();
+		const next = clamp(
+			(pinch.zoom * Math.hypot(b.x - a.x, b.y - a.y)) / pinch.distance,
+			1,
+			MAX_ZOOM
+		);
+		const midX = (a.x + b.x) / 2;
+		const midY = (a.y + b.y) / 2;
+		zoom = next;
+		// The zoomed sheet always covers its own unzoomed box.
+		panX = clamp(midX - pinch.originX - pinch.localX * next, sheetWidth * (1 - next), 0);
+		panY = clamp(
+			midY - pinch.originY - pinch.localY * next,
+			sheetWidth * sheetRatio * (1 - next),
+			0
+		);
+	}
+
+	function resetZoom() {
+		zoom = 1;
+		panX = 0;
+		panY = 0;
+	}
+
+	function down(e: PointerEvent & { currentTarget: HTMLElement }) {
+		if (e.pointerType === 'mouse' && e.button !== 0) return;
+		if (e.pointerType === 'touch') {
+			// A palm resting on the screen while a stylus draws.
+			if (drawing?.kind === 'pen') return;
+			touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
 		}
+		e.currentTarget.setPointerCapture(e.pointerId);
+		if (touches.size >= 2) {
+			if (drawing?.kind === 'touch') discard();
+			startPinch();
+			return;
+		}
+		if (drawing || gesturing) return;
+		begin(e);
+	}
+
+	function move(e: PointerEvent) {
+		if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+		if (pinch) {
+			movePinch();
+			return;
+		}
+		if (!drawing || e.pointerId !== drawing.pointer) return;
+		const { points } = drawing.stroke;
+		const rect = canvas.getBoundingClientRect();
+		const events = e.getCoalescedEvents?.() ?? [];
+		for (const ev of events.length ? events : [e]) {
+			addPoint(points, drawing.dynamics.point(sample(ev, rect)));
+		}
+		drawing.painter.advance(liveCtx);
+		const last = points[points.length - 1];
+		predicted = (e.getPredictedEvents?.() ?? []).map((ev) => {
+			const [x, y] = toCanvas(ev, rect);
+			return { x, y, width: last.width, alpha: last.alpha };
+		});
 		schedule();
 	}
 
 	function up(e: PointerEvent) {
-		if (e.pointerId !== activePointer || !current) return;
-		activePointer = null;
-		const [x, y] = toCanvas(e);
-		if (current.points.length > 2) current.points.push(x, y);
-		strokes.push(current);
-		current = null;
-		if (strokes.length > MAX_UNDO) paint(base.getContext('2d')!, strokes.shift()!);
-		undoable = strokes.length;
-		touched = true;
-		rebuild();
+		if (touches.delete(e.pointerId) && pinch) {
+			if (touches.size >= 2) startPinch();
+			else pinch = null;
+		}
+		if (!touches.size) gesturing = false;
+		if (!drawing || e.pointerId !== drawing.pointer) return;
+		if (e.type === 'pointerup') {
+			addPoint(
+				drawing.stroke.points,
+				drawing.dynamics.point(sample(e, canvas.getBoundingClientRect()))
+			);
+		}
+		commit();
 	}
 
 	function undo() {
@@ -172,7 +277,8 @@
 	}
 
 	onMount(() => {
-		ctx = canvas.getContext('2d')!;
+		ctx = canvas.getContext('2d', { alpha: false, desynchronized: true })!;
+		liveCtx = live.getContext('2d')!;
 		fill(base);
 		fill(committed);
 		render();
@@ -188,12 +294,14 @@
 	</header>
 
 	<div class="wrap" bind:clientWidth={wrapWidth} bind:clientHeight={wrapHeight}>
-		<!-- Strokes may start on the previous acolyte's strip; ink is clipped at the paper's edge. -->
+		<!-- Strokes may start on the previous acolyte's strip; graphite is clipped at the paper's edge. -->
 		<div
+			bind:this={sheet}
 			class="sheet"
 			role="application"
 			aria-label="Drawing paper"
 			style:width="{sheetWidth}px"
+			style:transform="translate({panX}px, {panY}px) scale({zoom})"
 			onpointerdown={down}
 			onpointermove={move}
 			onpointerup={up}
@@ -214,65 +322,39 @@
 	</div>
 
 	<footer>
-		<div class="tools" role="toolbar" aria-label="Brush">
-			{#each SIZES as option (option.id)}
+		<div class="tools" role="toolbar" aria-label="Pencil">
+			{#each TIPS as option (option.id)}
 				<button
 					type="button"
 					class="tool"
-					aria-label="{option.id} brush"
-					aria-pressed={size === option && !erasing}
-					onclick={() => {
-						size = option;
-						erasing = false;
-					}}
+					aria-label={option.label}
+					aria-pressed={tip === option}
+					onclick={() => (tip = option)}
 				>
-					<span class="dot" style:width="{option.dot}px" style:height="{option.dot}px"></span>
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						{#if option.erase}
+							<path d="M4 16l8-8 6 6-6 6H8zM10 20h10" />
+						{:else}
+							<path d="M4 17c3-7 6-9 8-5s5 2 8-5" stroke-width={option.id === 'fine' ? 1 : 3} />
+						{/if}
+					</svg>
 				</button>
 			{/each}
 			<button
 				type="button"
 				class="tool"
-				aria-label="Eraser"
-				aria-pressed={erasing}
-				onclick={() => (erasing = !erasing)}
+				aria-label="Reset zoom"
+				onclick={resetZoom}
+				disabled={!zoomed}
 			>
-				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l8-8 6 6-6 6H8zM10 20h10" /></svg>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<circle cx="10.5" cy="10.5" r="6" /><path d="M15 15l5 5M8 10.5h5" />
+				</svg>
 			</button>
 		</div>
 
-		<div class="tools" role="toolbar" aria-label="Colour">
-			{#each PALETTE as swatch (swatch.value)}
-				<button
-					type="button"
-					class="tool swatch"
-					aria-label={swatch.name}
-					aria-pressed={color === swatch.value && !erasing}
-					style:--swatch={swatch.value}
-					onclick={() => {
-						color = swatch.value;
-						erasing = false;
-					}}
-				></button>
-			{/each}
-			<label
-				class="tool swatch custom"
-				class:chosen={custom && !erasing}
-				style:--swatch={custom ? color : undefined}
-			>
-				<span class="sr-only">Pick any colour</span>
-				<input
-					type="color"
-					value={color}
-					oninput={(e) => {
-						color = e.currentTarget.value;
-						erasing = false;
-					}}
-				/>
-			</label>
-		</div>
-
 		<button class="btn solid block" type="button" onclick={finish} disabled={!touched}>
-			Lay down the pen
+			Lay down the pencil
 		</button>
 	</footer>
 </div>
@@ -284,12 +366,14 @@
 		margin: 1rem var(--pad);
 		display: grid;
 		place-items: center;
+		overflow: hidden;
 	}
 
 	.sheet {
 		display: grid;
 		touch-action: none;
 		cursor: crosshair;
+		transform-origin: 0 0;
 	}
 
 	.sheet :global(figcaption) {
@@ -354,7 +438,9 @@
 		background: transparent;
 		color: var(--gray);
 		cursor: pointer;
-		transition: color 120ms linear;
+		transition:
+			color 120ms linear,
+			opacity 120ms linear;
 	}
 
 	.tool:hover,
@@ -362,7 +448,11 @@
 		color: var(--bone);
 	}
 
-	/* Selection ring, drawn outside the swatch so the colour itself stays untouched. */
+	.tool:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+
 	.tool::after {
 		content: '';
 		position: absolute;
@@ -373,8 +463,7 @@
 		transition: opacity 120ms linear;
 	}
 
-	.tool[aria-pressed='true']::after,
-	.tool.chosen::after {
+	.tool[aria-pressed='true']::after {
 		opacity: 1;
 	}
 
@@ -384,33 +473,6 @@
 		fill: none;
 		stroke: currentColor;
 		stroke-width: 1.25;
-	}
-
-	.dot {
-		display: block;
-		border-radius: 50%;
-		background: currentColor;
-	}
-
-	.swatch::before {
-		content: '';
-		width: 1.6rem;
-		height: 1.6rem;
-		border-radius: 50%;
-		background: var(--swatch);
-		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bone) 18%, transparent);
-	}
-
-	.custom::before {
-		background: var(--swatch, conic-gradient(#b5452f, #c8902e, #5f7a3a, #1d3f6e, #6b3f6e, #b5452f));
-	}
-
-	.custom input {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		width: 100%;
-		height: 100%;
-		cursor: pointer;
+		stroke-linecap: round;
 	}
 </style>

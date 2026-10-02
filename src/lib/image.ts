@@ -46,17 +46,21 @@ export function cropOverlap(section: HTMLCanvasElement): HTMLCanvasElement {
 	return strip;
 }
 
-/** How much darker than the paper a pixel must be to count as ink. */
-const INK_CONTRAST = 48;
-/** Below this share of inked pixels, a strip reads as a bare edge. */
-const MIN_INK_SHARE = 0.002;
+export interface InkSensitivity {
+	/** How much darker than the paper a pixel must be to count as ink. */
+	contrast: number;
+	/** Below this share of inked pixels, a strip reads as a bare edge. */
+	share: number;
+}
+
+const PHOTO_INK: InkSensitivity = { contrast: 48, share: 0.002 };
 
 function luminance(px: Uint8ClampedArray, i: number): number {
 	return (px[i] * 77 + px[i + 1] * 150 + px[i + 2] * 29) >> 8;
 }
 
 /** Measured against the strip's own paper tone, so dim photos of blank paper stay blank. */
-function hasInk(image: ImageData): boolean {
+function hasInk(image: ImageData, { contrast, share }: InkSensitivity = PHOTO_INK): boolean {
 	const px = image.data;
 	const pixels = px.length / 4;
 	const histogram = new Uint32Array(256);
@@ -70,14 +74,18 @@ function hasInk(image: ImageData): boolean {
 		}
 	}
 	let ink = 0;
-	for (let v = 0; v < paper - INK_CONTRAST; v++) ink += histogram[v];
-	return ink >= pixels * MIN_INK_SHARE;
+	for (let v = 0; v < paper - contrast; v++) ink += histogram[v];
+	return ink >= pixels * share;
 }
 
 /** Whether any lines reach the strip the next acolyte will see. */
-export function overlapHasInk(section: HTMLCanvasElement): boolean {
+export function overlapHasInk(
+	section: HTMLCanvasElement,
+	sensitivity: InkSensitivity = PHOTO_INK
+): boolean {
 	return hasInk(
-		cropOverlap(section).getContext('2d')!.getImageData(0, 0, SECTION_WIDTH, OVERLAP_HEIGHT)
+		cropOverlap(section).getContext('2d')!.getImageData(0, 0, SECTION_WIDTH, OVERLAP_HEIGHT),
+		sensitivity
 	);
 }
 
