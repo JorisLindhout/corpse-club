@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
 	addPoint,
-	catmullRom,
+	chord,
 	dabAlpha,
 	darkness,
 	Dynamics,
+	hardnessFor,
+	profile,
 	spacingFor,
 	speedEase,
+	tiltAngles,
 	widthFor,
 	type Point,
 	type Sample
@@ -23,9 +26,15 @@ function sample(over: Partial<Sample>): Sample {
 		t: 0,
 		pressure: 0.5,
 		contact: 0,
+		altitude: Math.PI / 2,
+		azimuth: 0,
 		kind: 'mouse',
 		...over
 	};
+}
+
+function point(over: Partial<Point>): Point {
+	return { x: 0, y: 0, width: 4, stretch: 1, angle: 0, alpha: 0.3, ...over };
 }
 
 describe('speed and width', () => {
@@ -44,9 +53,9 @@ describe('speed and width', () => {
 });
 
 describe('pressure and darkness', () => {
-	it('never fully vanishes and reaches black at full pressure', () => {
+	it('never fully vanishes, and one pass stops short of full graphite', () => {
 		expect(darkness(0)).toBeGreaterThan(0);
-		expect(darkness(1)).toBe(1);
+		expect(darkness(1)).toBeLessThan(1);
 		expect(darkness(0.3)).toBeLessThan(darkness(0.7));
 	});
 
@@ -56,20 +65,78 @@ describe('pressure and darkness', () => {
 		expect(light.alpha).toBeLessThan(heavy.alpha);
 	});
 
+	function moving(kind: string, distance: number): Point {
+		const dynamics = new Dynamics(TIP);
+		dynamics.point(sample({ kind, pressure: 0.6, t: 0 }));
+		return dynamics.point(
+			sample({ kind, pressure: 0.6, t: 40, screenX: distance, x: distance * 2 })
+		);
+	}
+
 	it('draws a finger lighter and thinner when it moves fast', () => {
-		const slow = new Dynamics(TIP);
-		slow.point(sample({ t: 0 }));
-		const slowPoint = slow.point(sample({ t: 40, screenX: 4, x: 10 }));
-		const fast = new Dynamics(TIP);
-		fast.point(sample({ t: 0 }));
-		const fastPoint = fast.point(sample({ t: 40, screenX: 120, x: 300 }));
-		expect(fastPoint.alpha).toBeLessThan(slowPoint.alpha);
-		expect(fastPoint.width).toBeLessThan(slowPoint.width);
+		expect(moving('touch', 120).alpha).toBeLessThan(moving('touch', 4).alpha);
+		expect(moving('touch', 120).width).toBeLessThan(moving('touch', 4).width);
+	});
+
+	it('draws a stylus lighter when it moves fast, but less so than a finger', () => {
+		const pen = moving('pen', 120).alpha / moving('pen', 4).alpha;
+		const finger = moving('touch', 120).alpha / moving('touch', 4).alpha;
+		expect(pen).toBeLessThan(1);
+		expect(pen).toBeGreaterThan(finger);
+	});
+
+	it('firms the edge as pressure rises', () => {
+		expect(hardnessFor(darkness(0.1))).toBeLessThan(hardnessFor(darkness(0.9)));
+	});
+});
+
+describe('tip shape', () => {
+	it('reads an upright stylus as upright', () => {
+		expect(tiltAngles(0, 0).altitude).toBeCloseTo(Math.PI / 2);
+	});
+
+	it('reads lean direction from tilt', () => {
+		const right = tiltAngles(40, 0);
+		expect(right.azimuth).toBeCloseTo(0);
+		expect(right.altitude).toBeCloseTo((50 * Math.PI) / 180);
+		expect(tiltAngles(0, 40).azimuth).toBeCloseTo(Math.PI / 2);
+	});
+
+	it('is round for an upright stylus and long for a tilted one, along its lean', () => {
+		const upright = new Dynamics(TIP).point(sample({ kind: 'pen' }));
+		expect(upright.stretch).toBe(1);
+		const tilted = new Dynamics(TIP).point(sample({ kind: 'pen', ...tiltAngles(0, 50) }));
+		expect(tilted.stretch).toBeGreaterThan(1.5);
+		expect(tilted.angle).toBeCloseTo(Math.PI / 2);
+	});
+
+	it('gives a finger a flat lead, and the eraser a round one', () => {
+		expect(new Dynamics(TIP).point(sample({ kind: 'touch' })).stretch).toBeGreaterThan(1);
+		expect(new Dynamics({ ...TIP, erase: true }).point(sample({ kind: 'touch' })).stretch).toBe(1);
+	});
+
+	it('measures the footprint along and across the long side', () => {
+		expect(chord(4, 2, 0, 0)).toBeCloseTo(8);
+		expect(chord(4, 2, 0, Math.PI / 2)).toBeCloseTo(4);
+		expect(chord(4, 1, 0, 1.2)).toBeCloseTo(4);
+	});
+});
+
+describe('edge profile', () => {
+	it('is solid in the core and fades to nothing at the rim', () => {
+		expect(profile(0, 0.5)).toBe(1);
+		expect(profile(0.5, 0.5)).toBe(1);
+		expect(profile(0.75, 0.5)).toBeCloseTo(0.5);
+		expect(profile(1, 0.5)).toBe(0);
+	});
+
+	it('fades sooner for a softer edge', () => {
+		expect(profile(0.6, 0.2)).toBeLessThan(profile(0.6, 0.9));
 	});
 });
 
 describe('dab overlap', () => {
-	it('adds up to the target darkness over one dab width', () => {
+	it('adds up to the target darkness over one footprint', () => {
 		const width = 8;
 		const spacing = spacingFor(width);
 		const overlaps = width / spacing;
@@ -82,40 +149,12 @@ describe('dab overlap', () => {
 	});
 });
 
-describe('curve', () => {
-	const p0 = { x: 0, y: 0 };
-	const p1 = { x: 10, y: 0 };
-	const p2 = { x: 10, y: 10 };
-	const p3 = { x: 20, y: 10 };
-
-	it('passes through its sampled points', () => {
-		expect(catmullRom(p0, p1, p2, p3, 0)).toEqual({ x: 10, y: 0 });
-		const end = catmullRom(p0, p1, p2, p3, 1);
-		expect(end.x).toBeCloseTo(10);
-		expect(end.y).toBeCloseTo(10);
-	});
-
-	it('stays near the chord on a sharp turn', () => {
-		for (let u = 0; u <= 1; u += 0.1) {
-			const { x, y } = catmullRom(p0, p1, p2, p3, u);
-			expect(Math.abs(x - 10)).toBeLessThan(3);
-			expect(y).toBeGreaterThanOrEqual(-0.01);
-			expect(y).toBeLessThanOrEqual(10.01);
-		}
-	});
-
-	it('copes with repeated points', () => {
-		const { x, y } = catmullRom(p1, p1, p2, p2, 0.5);
-		expect(Number.isFinite(x) && Number.isFinite(y)).toBe(true);
-	});
-});
-
 describe('points', () => {
-	it('folds a barely moved sample into the last point, keeping the heavier mark', () => {
-		const points: Point[] = [{ x: 0, y: 0, width: 4, alpha: 0.3 }];
-		expect(addPoint(points, { x: 0.2, y: 0, width: 5, alpha: 0.6 })).toBe(false);
-		expect(points).toEqual([{ x: 0, y: 0, width: 5, alpha: 0.6 }]);
-		expect(addPoint(points, { x: 3, y: 0, width: 4, alpha: 0.2 })).toBe(true);
+	it('folds a sample that has not moved into the last point, keeping the heavier mark', () => {
+		const points: Point[] = [point({})];
+		expect(addPoint(points, point({ x: 0.1, width: 5, alpha: 0.6 }))).toBe(false);
+		expect(points).toEqual([point({ width: 5, alpha: 0.6 })]);
+		expect(addPoint(points, point({ x: 1 }))).toBe(true);
 		expect(points).toHaveLength(2);
 	});
 });

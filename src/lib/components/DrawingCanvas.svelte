@@ -9,6 +9,7 @@
 		paintStroke,
 		PAPER,
 		StrokePainter,
+		tiltAngles,
 		type Point,
 		type Sample,
 		type Stroke
@@ -32,10 +33,13 @@
 	const MAX_UNDO = 20;
 	const MAX_ZOOM = 4;
 	const TIPS = [
-		{ id: 'fine', label: 'Fine tip', width: 3, erase: false },
-		{ id: 'broad', label: 'Broad tip', width: 9, erase: false },
-		{ id: 'eraser', label: 'Eraser', width: 24, erase: true }
+		{ id: 'fine', label: 'Fine', width: 3, mark: 1 },
+		{ id: 'broad', label: 'Broad', width: 9, mark: 2.5 },
+		{ id: 'thick', label: 'Thick', width: 30, mark: 5 }
 	];
+	const MARK = 'M4 17c3-7 6-9 8-5s5 2 8-5';
+	/** The eraser is a little wider than the tip it turns, so one pass clears that tip's line. */
+	const ERASER_WIDTH = 1.3;
 
 	let sheet: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
@@ -73,6 +77,8 @@
 	let gesturing = false;
 
 	let tip = $state.raw(TIPS[0]);
+	/** Turns whichever tip is chosen into an eraser of its size. */
+	let erasing = $state(false);
 	let undoable = $state(0);
 	let touched = $state(false);
 	let zoom = $state(1);
@@ -128,13 +134,17 @@
 			t: e.timeStamp,
 			pressure: e.pressure,
 			contact: Math.max(e.width, e.height),
+			...tiltAngles(e.tiltX, e.tiltY),
 			kind: e.pointerType
 		};
 	}
 
 	function begin(e: PointerEvent) {
-		const stroke: Stroke = { erase: tip.erase, points: [] };
-		const dynamics = new Dynamics(tip);
+		const stroke: Stroke = { erase: erasing, points: [] };
+		const dynamics = new Dynamics({
+			width: erasing ? tip.width * ERASER_WIDTH : tip.width,
+			erase: erasing
+		});
 		drawing = {
 			pointer: e.pointerId,
 			kind: e.pointerType,
@@ -242,7 +252,7 @@
 		const last = points[points.length - 1];
 		predicted = (e.getPredictedEvents?.() ?? []).map((ev) => {
 			const [x, y] = toCanvas(ev, rect);
-			return { x, y, width: last.width, alpha: last.alpha };
+			return { ...last, x, y };
 		});
 		schedule();
 	}
@@ -327,22 +337,33 @@
 				<button
 					type="button"
 					class="tool"
-					aria-label={option.label}
+					aria-label="{option.label} {erasing ? 'eraser' : 'tip'}"
 					aria-pressed={tip === option}
 					onclick={() => (tip = option)}
 				>
+					<!-- Hollow while erasing: the next stroke takes away rather than lays down. -->
 					<svg viewBox="0 0 24 24" aria-hidden="true">
-						{#if option.erase}
-							<path d="M4 16l8-8 6 6-6 6H8zM10 20h10" />
+						{#if erasing}
+							<path d={MARK} stroke-width={option.mark + 2} />
+							<path class="hollow" d={MARK} stroke-width={option.mark} />
 						{:else}
-							<path d="M4 17c3-7 6-9 8-5s5 2 8-5" stroke-width={option.id === 'fine' ? 1 : 3} />
+							<path d={MARK} stroke-width={option.mark} />
 						{/if}
 					</svg>
 				</button>
 			{/each}
 			<button
 				type="button"
-				class="tool"
+				class="tool apart"
+				aria-label="Eraser"
+				aria-pressed={erasing}
+				onclick={() => (erasing = !erasing)}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16l8-8 6 6-6 6H8zM10 20h10" /></svg>
+			</button>
+			<button
+				type="button"
+				class="tool apart"
 				aria-label="Reset zoom"
 				onclick={resetZoom}
 				disabled={!zoomed}
@@ -451,6 +472,14 @@
 	.tool:disabled {
 		opacity: 0.3;
 		cursor: default;
+	}
+
+	.apart {
+		margin-left: 0.75rem;
+	}
+
+	.tool .hollow {
+		stroke: var(--black);
 	}
 
 	.tool::after {
