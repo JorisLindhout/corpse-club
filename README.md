@@ -105,9 +105,9 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 
 ### The flow
 
-1. **Summon** (`POST /create`): creates a corpse and three sections, each with its own `crypto.randomUUID()` invite token, then redirects the creator to `/draw/<token-1>`.
+1. **Summon** (`/draw/new`): opens the head of a corpse that doesn't exist yet. Nothing is stored until the head is sealed, so walking away leaves no empty corpse behind.
 2. **Draw**: on paper with the camera (primary) or on screen (fallback). There is no photo upload: only the live camera overlay and the on-screen canvas show the previous edge while drawing, so lines can meet.
-3. **Seal** (`POST /api/draw/[token]/submit`): uploads the section and, for sections I and II, a separate image of just its bottom strip. Whoever sealed it gets the next invite link and the native share sheet. Earlier participants who subscribed are told which part was drawn and which comes next.
+3. **Seal**: uploads the section and, for sections I and II, a separate image of just its bottom strip. Sealing the head (`POST /api/corpse`) creates the corpse and its three sections, each with its own `crypto.randomUUID()` invite token. Later sections are sealed with `POST /api/draw/[token]/submit`. Whoever sealed it gets the next invite link and the native share sheet. Earlier participants who subscribed are told which part was drawn and which comes next.
 4. **Pass on**: the next hand opens the link and sees only the strip. When they seal, they get the last invite link and pass it on, like the folded paper.
 5. **Reveal**: when section III is sealed, every subscribed participant is summoned to `/c/<id>`.
 
@@ -156,18 +156,20 @@ Turns never depend on push: each hand gets the next invite link the moment they 
 
 `migrations/0001_init.sql` follows the spec, with two additions:
 
-- `sections.activated_at`: when a section became drawable (corpse creation for section I, the previous section's completion otherwise). Reminder timing is measured from this, since sections have no `created_at`.
+- `sections.activated_at`: when a section became drawable (the previous section's completion). Reminder timing is measured from this, since sections have no `created_at`.
 - `rate_limits`: counters for the D1 rate limiter.
 
 There are also indexes for lookups by device and active sections.
 
 `migrations/0002_device_subscriptions.sql` moves `push_subscriptions` from per corpse to per device: one row per endpoint (unique), keyed by `device_id`. Who gets summoned for a corpse is derived from `corpses.creator_device_id` and `sections.device_id`.
 
+`migrations/0004_drop_unsealed_corpses.sql` deletes corpses summoned under the old flow whose head was never drawn.
+
 ## API
 
 | Method | Route                                 | Description                                                      |
 | ------ | ------------------------------------- | ---------------------------------------------------------------- |
-| POST   | `/api/corpse`                         | Create a corpse; returns `corpseId` and the section I `drawUrl`  |
+| POST   | `/api/corpse`                         | Seal the head of a new corpse, creating it; returns invite path  |
 | GET    | `/api/corpse/[id]`                    | Status and metadata (invite path for the creator and prev. hand) |
 | GET    | `/api/corpse/[id]/image`              | Assembled image (stored WebP, or an on-the-fly SVG stack)        |
 | POST   | `/api/corpse/[id]/image`              | Participant uploads the composited image (once)                  |
@@ -183,7 +185,7 @@ There are also indexes for lookups by device and active sections.
 | Route            | Description                                                       |
 | ---------------- | ----------------------------------------------------------------- |
 | `/`              | Landing page with "Summon a corpse"                               |
-| `/create`        | Creates a corpse (form POST) and starts section I                 |
+| `/draw/new`      | Drawing flow for the head of a new corpse (`/create` redirects)   |
 | `/draw/[token]`  | Drawing flow for one section                                      |
 | `/c/[id]`        | Reveal page and permalink (redirects to status while in progress) |
 | `/c/[id]/status` | Progress; the creator and previous hand get the invite link here  |

@@ -63,7 +63,6 @@ describe('corpseView', () => {
 	it('never leaks invite tokens to anyone else', () => {
 		const view = corpseView({ corpse: corpse(), sections }, 'stranger');
 		expect(view.invitePath).toBeNull();
-		expect(view.resumeToken).toBeNull();
 		expect(JSON.stringify(view)).not.toContain('token-');
 	});
 });

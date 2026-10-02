@@ -41,12 +41,16 @@ export async function ensureDevice(db: D1Database, deviceId: string): Promise<vo
 		.run();
 }
 
+/**
+ * A corpse only comes into being once its head is sealed, so abandoned
+ * summons leave nothing behind. The torso becomes drawable at once.
+ */
 export async function createCorpse(
 	db: D1Database,
-	deviceId: string
-): Promise<{ corpseId: string; token: string }> {
+	input: { corpseId: string; imageKey: string; contributorName: string | null; deviceId: string }
+): Promise<{ nextToken: string }> {
 	const now = Date.now();
-	const corpseId = crypto.randomUUID();
+	const { corpseId, deviceId } = input;
 	const tokens = Array.from({ length: SECTION_COUNT }, () => crypto.randomUUID());
 
 	await db.batch([
@@ -56,17 +60,33 @@ export async function createCorpse(
 				'INSERT INTO corpses (id, status, created_at, creator_device_id) VALUES (?, ?, ?, ?)'
 			)
 			.bind(corpseId, 'in_progress', now, deviceId),
-		...tokens.map((token, i) =>
+		db
+			.prepare(
+				`INSERT INTO sections
+				   (id, corpse_id, position, invite_token, status, image_key, contributor_name, device_id, completed_at, activated_at)
+				 VALUES (?, ?, 1, ?, 'complete', ?, ?, ?, ?, ?)`
+			)
+			.bind(
+				crypto.randomUUID(),
+				corpseId,
+				tokens[0],
+				input.imageKey,
+				input.contributorName,
+				deviceId,
+				now,
+				now
+			),
+		...tokens.slice(1).map((token, i) =>
 			db
 				.prepare(
 					`INSERT INTO sections (id, corpse_id, position, invite_token, status, activated_at)
 					 VALUES (?, ?, ?, ?, 'pending', ?)`
 				)
-				.bind(crypto.randomUUID(), corpseId, i + 1, token, i === 0 ? now : null)
+				.bind(crypto.randomUUID(), corpseId, i + 2, token, i === 0 ? now : null)
 		)
 	]);
 
-	return { corpseId, token: tokens[0] };
+	return { nextToken: tokens[1] };
 }
 
 async function sectionsFor(db: D1Database, corpseId: string): Promise<SectionRow[]> {

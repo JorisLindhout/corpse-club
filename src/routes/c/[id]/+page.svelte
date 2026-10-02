@@ -2,7 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { ROMAN, SECTION_COUNT } from '$lib/constants';
+	import { NEW_CORPSE, ROMAN, SECTION_COUNT } from '$lib/constants';
 	import { assemble, encodeCanvas } from '$lib/image';
 	import { shareLink } from '$lib/share';
 	import Reveal from '$lib/components/Reveal.svelte';
@@ -92,9 +92,9 @@
 		<p class="label">Laid to rest</p>
 		<h2>This corpse has rotted</h2>
 		<p class="muted">No hand came in time. Some creatures are never meant to be whole.</p>
-		<form method="POST" action="/create">
-			<button class="btn solid block" type="submit">Summon another</button>
-		</form>
+		<a class="btn solid block" href={resolve('/draw/[token]', { token: NEW_CORPSE })}>
+			Summon another
+		</a>
 	</section>
 {:else}
 	<article>

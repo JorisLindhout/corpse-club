@@ -42,6 +42,7 @@ describe('isResumePath', () => {
 
 	it('accepts the pages an installed app may reopen', () => {
 		expect(isResumePath(`/draw/${id}`)).toBe(true);
+		expect(isResumePath('/draw/new')).toBe(true);
 		expect(isResumePath(`/c/${id}`)).toBe(true);
 		expect(isResumePath(`/c/${id}/status`)).toBe(true);
 	});

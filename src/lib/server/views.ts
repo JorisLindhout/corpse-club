@@ -17,8 +17,6 @@ export interface CorpseView {
 	sections: SectionView[];
 	/** Only present for the creator and the previous hand, once the previous section is sealed. */
 	invitePath: string | null;
-	/** Present for the creator while their own first section is unfinished. */
-	resumeToken: string | null;
 }
 
 /** Client-safe view of a corpse. Only the creator and the previous hand see the open invite. */
@@ -43,8 +41,6 @@ export function corpseView({ corpse, sections }: CorpseWithSections, deviceId: s
 				completedAt: s?.completed_at ?? null
 			};
 		}),
-		invitePath:
-			holdsInvite && active && active.position > 1 ? `/draw/${active.invite_token}` : null,
-		resumeToken: isCreator && active?.position === 1 ? active.invite_token : null
+		invitePath: holdsInvite && active && active.position > 1 ? `/draw/${active.invite_token}` : null
 	};
 }

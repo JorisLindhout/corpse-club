@@ -20,9 +20,12 @@ export const HOUR = 60 * 60 * 1000;
 export const FIRST_REMINDER_AFTER = 48 * HOUR;
 export const NEXT_REMINDER_AFTER = 24 * HOUR;
 
+/** Draw page slug for the head of a corpse that is summoned but not yet sealed. */
+export const NEW_CORPSE = 'new';
+
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const UUID_RE = new RegExp(`^${UUID}$`, 'i');
-const RESUME_RE = new RegExp(`^/(draw/${UUID}|c/${UUID}(/status)?)$`, 'i');
+const RESUME_RE = new RegExp(`^/(draw/(${UUID}|${NEW_CORPSE})|c/${UUID}(/status)?)$`, 'i');
 
 export function isUuid(value: unknown): value is string {
 	return typeof value === 'string' && UUID_RE.test(value);

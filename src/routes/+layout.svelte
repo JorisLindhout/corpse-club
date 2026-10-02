@@ -1,19 +1,15 @@
 <script lang="ts">
 	import '../app.css';
-	import { enhance } from '$app/forms';
 	import { afterNavigate, goto, invalidateAll, onNavigate, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { isResumePath } from '$lib/constants';
+	import { NEW_CORPSE, isResumePath } from '$lib/constants';
 	import { claimFirstLaunch, syncDevice } from '$lib/device';
 	import { isStandalone } from '$lib/push';
 	import splash from '$lib/splash.json';
 	import { DEFAULT_PREVIEW, SITE_NAME, UNLISTED } from '$lib/seo';
-	import type { SubmitFunction } from '@sveltejs/kit';
 
 	let { children, data } = $props();
-
-	let summoning = $state(false);
 
 	let preview = $derived(page.data.preview ?? DEFAULT_PREVIEW);
 	let url = $derived(page.url.origin + page.url.pathname);
@@ -50,22 +46,6 @@
 		}
 		if (syncDevice(data.deviceId)) invalidateAll();
 	}
-
-	// Every submission creates a corpse, so repeated taps must not stack up.
-	const summon: SubmitFunction = ({ cancel }) => {
-		if (summoning) {
-			cancel();
-			return;
-		}
-		summoning = true;
-		return async ({ update }) => {
-			try {
-				await update();
-			} finally {
-				summoning = false;
-			}
-		};
-	};
 
 	onNavigate((navigation) => {
 		if (!document.startViewTransition) return;
@@ -118,14 +98,12 @@
 
 	{#if !immersive}
 		<nav class="bottom" aria-label="Primary">
-			<form method="POST" action="/create" use:enhance={summon}>
-				<button type="submit" class="tab" aria-busy={summoning} class:summoning>
-					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M12 2.5v19M7 7.5h10M8 12.5h8M7 17.5h10" />
-					</svg>
-					<span>{summoning ? 'Summoning' : 'Summon'}</span>
-				</button>
-			</form>
+			<a href={resolve('/draw/[token]', { token: NEW_CORPSE })} class="tab">
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path d="M12 2.5v19M7 7.5h10M8 12.5h8M7 17.5h10" />
+				</svg>
+				<span>Summon</span>
+			</a>
 			<a
 				href={resolve('/my-corpses')}
 				class="tab"
@@ -171,10 +149,6 @@
 		border-top: var(--line);
 	}
 
-	.bottom form {
-		display: contents;
-	}
-
 	.tab {
 		display: flex;
 		flex-direction: column;
@@ -194,18 +168,13 @@
 		cursor: pointer;
 	}
 
-	form + .tab {
+	.tab + .tab {
 		border-left: var(--line-faint);
 	}
 
 	.tab:hover,
-	.tab[aria-current='page'],
-	.tab.summoning {
+	.tab[aria-current='page'] {
 		color: var(--bone);
-	}
-
-	.tab.summoning svg {
-		animation: pulse 1.6s steps(2, jump-none) infinite;
 	}
 
 	.tab svg {

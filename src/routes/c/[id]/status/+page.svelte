@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { ROMAN, SECTION_COUNT, SECTION_LABELS } from '$lib/constants';
+	import { NEW_CORPSE, ROMAN, SECTION_COUNT, SECTION_LABELS } from '$lib/constants';
 	import PushPrompt from '$lib/components/PushPrompt.svelte';
 	import SectionSlots from '$lib/components/SectionSlots.svelte';
 	import ShareLink from '$lib/components/ShareLink.svelte';
@@ -42,12 +42,7 @@
 	<SectionSlots sections={corpse.sections} {expired} />
 
 	{#if !expired}
-		{#if corpse.resumeToken}
-			<p>The head is yours to draw.</p>
-			<a class="btn solid block" href={resolve('/draw/[token]', { token: corpse.resumeToken })}>
-				Your turn to draw
-			</a>
-		{:else if corpse.invitePath && active}
+		{#if corpse.invitePath && active}
 			<div class="invite">
 				<p>
 					Summon a hand for <strong>{SECTION_LABELS[active.position - 1].toLowerCase()}</strong>.
@@ -69,9 +64,9 @@
 			reason="Be summoned as each part is drawn, and when the corpse is complete."
 		/>
 	{:else}
-		<form method="POST" action="/create">
-			<button class="btn solid block" type="submit">Summon another</button>
-		</form>
+		<a class="btn solid block" href={resolve('/draw/[token]', { token: NEW_CORPSE })}>
+			Summon another
+		</a>
 	{/if}
 
 	<a class="btn ghost block" href={resolve('/my-corpses')}>My corpses</a>

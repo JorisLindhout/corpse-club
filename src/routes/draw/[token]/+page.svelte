@@ -34,7 +34,7 @@
 	let drawnWith = $state<Tool>('canvas');
 	let previewUrl = $state<string | null>(null);
 	let failure = $state<string | null>(null);
-	let nextInvitePath = $state<string | null>(null);
+	let sealed = $state<{ corpseId: string; nextInvitePath: string | null } | null>(null);
 	/** The previous hand's strip holds no lines to continue. */
 	let bareEdge = $state(false);
 	/** No lines reach this section's own strip, so the next hand would see nothing. */
@@ -89,7 +89,7 @@
 			form.append('name', cleanName);
 			localStorage.setItem(NAME_KEY, cleanName);
 
-			const response = await fetch(`/api/draw/${data.token}/submit`, {
+			const response = await fetch(data.token ? `/api/draw/${data.token}/submit` : '/api/corpse', {
 				method: 'POST',
 				body: form
 			});
@@ -97,12 +97,13 @@
 				const body = (await response.json().catch(() => null)) as { message?: string } | null;
 				throw new Error(body?.message ?? 'The fold would not hold.');
 			}
-			const result: { complete: boolean; nextInvitePath: string | null } = await response.json();
+			const result: { corpseId: string; complete: boolean; nextInvitePath: string | null } =
+				await response.json();
 			if (result.complete) {
-				await goto(resolve('/c/[id]', { id: data.corpseId }));
+				await goto(resolve('/c/[id]', { id: result.corpseId }));
 				return;
 			}
-			nextInvitePath = result.nextInvitePath;
+			sealed = { corpseId: result.corpseId, nextInvitePath: result.nextInvitePath };
 			step = 'sealed';
 		} catch (e) {
 			failure = e instanceof Error ? e.message : 'The fold would not hold.';
@@ -186,12 +187,12 @@
 				<p class="label">{partLabel}</p>
 				<h2>Not yet</h2>
 				<p class="muted">The previous hand is still drawing. Return when you are summoned.</p>
-			{:else if step === 'sealed'}
+			{:else if step === 'sealed' && sealed}
 				<p class="label">{partLabel}</p>
 				<h2>{part} is drawn</h2>
-				{#if nextInvitePath}
+				{#if sealed.nextInvitePath}
 					<p>Pass the corpse on. Send this link to the next hand. They will see only the edge.</p>
-					<ShareLink path={nextInvitePath} text="Draw the next part of a corpse." />
+					<ShareLink path={sealed.nextInvitePath} text="Draw the next part of a corpse." />
 				{/if}
 				<PushPrompt
 					vapidPublicKey={data.vapidPublicKey}
@@ -199,7 +200,7 @@
 					reachable={data.reachable}
 					reason="Be summoned as each part is drawn, and when the corpse is complete."
 				/>
-				<a class="btn ghost block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
+				<a class="btn ghost block" href={resolve('/c/[id]/status', { id: sealed.corpseId })}>
 					Watch over the corpse
 				</a>
 			{:else if reviewing}

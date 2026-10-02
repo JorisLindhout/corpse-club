@@ -92,3 +92,37 @@ export function objectResponse(object: R2ObjectBody, immutable: boolean): Respon
 export function overlapKey(imageKey: string): string {
 	return imageKey.replace(/(\.\w+)$/, '-overlap$1');
 }
+
+export interface SectionUpload {
+	image: ValidImage;
+	overlap: ValidImage | null;
+	contributorName: string | null;
+}
+
+/** Reads a sealed section from its form. The last section has no strip to pass on. */
+export async function readSection(request: Request, isLast: boolean): Promise<SectionUpload> {
+	const form = await request.formData();
+	return {
+		image: await readImage(form.get('image'), 'image'),
+		overlap: isLast ? null : await readImage(form.get('overlap'), 'overlap'),
+		contributorName: sanitizeName(form.get('name'))
+	};
+}
+
+export function sectionKey(corpseId: string, position: number, image: ValidImage): string {
+	return `corpses/${corpseId}/section-${position}.${image.ext}`;
+}
+
+export async function storeSection(
+	bucket: R2Bucket,
+	imageKey: string,
+	{ image, overlap }: SectionUpload
+): Promise<void> {
+	await Promise.all([
+		bucket.put(imageKey, image.bytes, { httpMetadata: { contentType: image.type } }),
+		overlap &&
+			bucket.put(overlapKey(imageKey), overlap.bytes, {
+				httpMetadata: { contentType: overlap.type }
+			})
+	]);
+}

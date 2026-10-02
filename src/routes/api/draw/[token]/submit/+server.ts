@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { SECTION_COUNT, SECTION_LABELS, isUuid } from '$lib/constants';
 import { completeSection, drawState, getByToken } from '$lib/server/repo';
-import { getEnv, overlapKey, rateLimit, readImage, sanitizeName } from '$lib/server/http';
+import { getEnv, rateLimit, readSection, sectionKey, storeSection } from '$lib/server/http';
 import { summon } from '$lib/server/notify';
 import { assembleCorpse } from '$lib/server/assemble';
 import type { RequestHandler } from './$types';
@@ -21,22 +21,13 @@ export const POST: RequestHandler = async (event) => {
 	if (state === 'expired') error(410, 'This corpse has rotted');
 	if (state === 'locked') error(409, 'The previous hand is still drawing');
 
-	const form = await event.request.formData();
-	const image = await readImage(form.get('image'), 'image');
 	const isLast = section.position === SECTION_COUNT;
-	const overlap = isLast ? null : await readImage(form.get('overlap'), 'overlap');
-	const contributorName = sanitizeName(form.get('name'));
+	const upload = await readSection(event.request, isLast);
+	const { contributorName } = upload;
 
-	const imageKey = `corpses/${corpse.id}/section-${section.position}.${image.ext}`;
+	const imageKey = sectionKey(corpse.id, section.position, upload.image);
 	if (await env.BUCKET.head(imageKey)) error(409, 'This section has already been drawn');
-
-	await Promise.all([
-		env.BUCKET.put(imageKey, image.bytes, { httpMetadata: { contentType: image.type } }),
-		overlap &&
-			env.BUCKET.put(overlapKey(imageKey), overlap.bytes, {
-				httpMetadata: { contentType: overlap.type }
-			})
-	]);
+	await storeSection(env.BUCKET, imageKey, upload);
 
 	const deviceId = event.locals.deviceId;
 	const { sealed, corpseComplete } = await completeSection(env.DB, {
