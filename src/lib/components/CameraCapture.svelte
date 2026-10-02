@@ -161,12 +161,12 @@
 
 	<div class="hint">
 		{#if status === 'starting'}
-			<p class="pulse">Opening the eye...</p>
+			<p class="pulse">Opening the eye…</p>
 		{:else if status === 'failed'}
 			<p>The camera will not open.</p>
 		{:else if overlapSrc && bareEdge}
 			<p>
-				The previous hand left the edge bare. Lay your paper inside the frame and begin anywhere
+				The previous acolyte left the edge bare. Lay your paper inside the frame and begin anywhere
 				along its top edge.
 			</p>
 		{:else if overlay}

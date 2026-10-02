@@ -18,9 +18,9 @@
 				<span class="part">{SECTION_LABELS[slot.position - 1]}</span>
 				<span class="state">
 					{#if slot.status === 'complete'}
-						Drawn by {slot.name ?? 'an anonymous hand'}
+						Drawn by {slot.name ?? 'an anonymous acolyte'}
 					{:else if slot.status === 'active'}
-						{expired ? 'Abandoned' : 'Awaiting a hand'}
+						{expired ? 'Abandoned' : 'Awaiting an acolyte'}
 					{:else}
 						Waits its turn
 					{/if}

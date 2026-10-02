@@ -129,7 +129,7 @@ export function drawState(
 	return 'open';
 }
 
-/** The section currently waiting for a hand, if any. */
+/** The section currently waiting for an acolyte, if any. */
 export function activeSection(sections: SectionRow[]): SectionRow | undefined {
 	return sections.find((s) => s.status !== 'complete');
 }

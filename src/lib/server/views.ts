@@ -15,11 +15,11 @@ export interface CorpseView {
 	completedAt: number | null;
 	isCreator: boolean;
 	sections: SectionView[];
-	/** Only present for the creator and the previous hand, once the previous section is sealed. */
+	/** Only present for the creator and the previous acolyte, once the previous section is sealed. */
 	invitePath: string | null;
 }
 
-/** Client-safe view of a corpse. Only the creator and the previous hand see the open invite. */
+/** Client-safe view of a corpse. Only the creator and the previous acolyte see the open invite. */
 export function corpseView({ corpse, sections }: CorpseWithSections, deviceId: string): CorpseView {
 	const isCreator = corpse.creator_device_id === deviceId;
 	const active = corpse.status === 'in_progress' ? activeSection(sections) : undefined;

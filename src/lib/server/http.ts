@@ -4,7 +4,7 @@ import { hitRateLimit } from './repo';
 
 export function getEnv(event: Pick<RequestEvent, 'platform'>): Env {
 	const env = event.platform?.env;
-	if (!env?.DB || !env?.BUCKET) error(500, 'The ritual space is not bound');
+	if (!env?.DB || !env?.BUCKET) error(500, 'The ritual space is not bound.');
 	return env;
 }
 
@@ -22,7 +22,7 @@ export async function rateLimit(
 		// getClientAddress is unavailable in some local setups
 	}
 	const allowed = await hitRateLimit(env.DB, `${bucket}:${ip}`, limit, windowSeconds);
-	if (!allowed) error(429, 'Too many hands at once. Wait a moment.');
+	if (!allowed) error(429, 'Too many acolytes at once. Wait a moment.');
 }
 
 const IMAGE_TYPES = {
@@ -48,18 +48,18 @@ export interface ValidImage {
 	ext: string;
 }
 
-/** Checks declared type, actual magic bytes and size. */
+/** Checks declared type, actual magic bytes and size. `subject` names the image in errors shown to people. */
 export async function readImage(
 	value: FormDataEntryValue | null,
-	field: string
+	subject: string
 ): Promise<ValidImage> {
-	if (!(value instanceof File)) error(400, `Missing ${field}`);
-	if (value.size === 0 || value.size > MAX_UPLOAD_BYTES) error(413, `${field} is too large`);
-	if (!(value.type in IMAGE_TYPES)) error(415, `${field} must be WebP, JPEG or PNG`);
+	if (!(value instanceof File)) error(400, `${subject} is missing.`);
+	if (value.size === 0 || value.size > MAX_UPLOAD_BYTES) error(413, `${subject} is too large.`);
+	if (!(value.type in IMAGE_TYPES)) error(415, `${subject} must be WebP, JPEG or PNG.`);
 
 	const bytes = await value.arrayBuffer();
 	const type = sniff(new Uint8Array(bytes, 0, Math.min(16, bytes.byteLength)));
-	if (!type || type !== value.type) error(415, `${field} is not the image it claims to be`);
+	if (!type || type !== value.type) error(415, `${subject} is not the image it claims to be.`);
 
 	return { bytes, type, ext: IMAGE_TYPES[type] };
 }
@@ -103,8 +103,8 @@ export interface SectionUpload {
 export async function readSection(request: Request, isLast: boolean): Promise<SectionUpload> {
 	const form = await request.formData();
 	return {
-		image: await readImage(form.get('image'), 'image'),
-		overlap: isLast ? null : await readImage(form.get('overlap'), 'overlap'),
+		image: await readImage(form.get('image'), 'The drawing'),
+		overlap: isLast ? null : await readImage(form.get('overlap'), 'The edge'),
 		contributorName: sanitizeName(form.get('name'))
 	};
 }

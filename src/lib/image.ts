@@ -27,7 +27,7 @@ export async function encodeCanvas(canvas: HTMLCanvasElement, quality = 0.86): P
 	}
 }
 
-/** Bottom strip of a finished section, handed to the next hand. */
+/** Bottom strip of a finished section, passed to the next acolyte. */
 export function cropOverlap(section: HTMLCanvasElement): HTMLCanvasElement {
 	const strip = createCanvas(SECTION_WIDTH, OVERLAP_HEIGHT);
 	strip
@@ -74,7 +74,7 @@ function hasInk(image: ImageData): boolean {
 	return ink >= pixels * MIN_INK_SHARE;
 }
 
-/** Whether any lines reach the strip the next hand will see. */
+/** Whether any lines reach the strip the next acolyte will see. */
 export function overlapHasInk(section: HTMLCanvasElement): boolean {
 	return hasInk(
 		cropOverlap(section).getContext('2d')!.getImageData(0, 0, SECTION_WIDTH, OVERLAP_HEIGHT)

@@ -1,4 +1,4 @@
-import { FIRST_REMINDER_AFTER, NEXT_REMINDER_AFTER, ROMAN } from '../constants';
+import { FIRST_REMINDER_AFTER, NEXT_REMINDER_AFTER, SECTION_LABELS } from '../constants';
 import { summon, type PushEnv, type Summons } from './notify';
 
 interface StaleSection {
@@ -17,7 +17,7 @@ export interface ReminderReport {
 	expired: number;
 }
 
-/** The creator and the previous hand both hold the invite, so both are nudged. */
+/** The creator and the previous acolyte both hold the invite, so both are nudged. */
 async function nudge(env: PushEnv, section: StaleSection, message: Summons) {
 	const devices = new Set([section.creator_device_id, section.previous_device_id]);
 	for (const deviceId of devices) {
@@ -45,7 +45,8 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 
 	for (const section of results) {
 		const count = section.reminder_count ?? 0;
-		const label = `Section ${ROMAN[section.position - 1]}`;
+		const label = SECTION_LABELS[section.position - 1];
+		const part = label.toLowerCase();
 		const statusUrl = `/c/${section.corpse_id}/status`;
 
 		const due =
@@ -64,7 +65,7 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 			report.expired++;
 			await nudge(env, section, {
 				title: 'The corpse has rotted',
-				body: `No hand came for ${label}. It has been laid to rest.`,
+				body: `No acolyte came for ${part}. It has been laid to rest.`,
 				url: statusUrl
 			});
 			continue;
@@ -85,7 +86,7 @@ export async function runReminders(env: PushEnv, now = Date.now()): Promise<Remi
 			count === 0
 				? {
 						title: 'The corpse grows cold',
-						body: `${label} has waited two days. Summon the hand again.`,
+						body: `${label} has waited two days. Summon the acolyte again.`,
 						url: statusUrl
 					}
 				: {

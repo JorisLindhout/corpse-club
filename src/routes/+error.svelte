@@ -11,7 +11,7 @@
 	<p class="label">{page.status}</p>
 	<h2>{page.status === 404 ? 'Nothing lives here' : 'The ritual faltered'}</h2>
 	<p class="muted">{page.error?.message ?? 'Something went wrong.'}</p>
-	<a class="btn solid block" href={resolve('/')}>Return</a>
+	<a class="btn solid block" href={resolve('/')}>Return home</a>
 </section>
 
 <style>

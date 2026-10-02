@@ -98,9 +98,9 @@
 	{#if phase === 'loading' || phase === 'veiled'}
 		<div class="curtain">
 			{#if phase === 'loading'}
-				<p class="label pulse">Exhuming...</p>
+				<p class="label pulse">Exhuming…</p>
 			{:else}
-				<p class="label">Three hands have drawn</p>
+				<p class="label">Three acolytes have drawn</p>
 				<h2>The corpse is complete</h2>
 				<button class="btn solid" type="button" onclick={() => unveil()}>Unveil it</button>
 			{/if}

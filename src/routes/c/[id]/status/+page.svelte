@@ -32,8 +32,8 @@
 <section>
 	{#if expired}
 		<p class="label">Laid to rest</p>
-		<h2>The corpse has rotted</h2>
-		<p class="muted">No hand came in time.</p>
+		<h2>This corpse has rotted</h2>
+		<p class="muted">No acolyte came in time. Some creatures are never meant to be whole.</p>
 	{:else}
 		<p class="label">A corpse in progress</p>
 		<h2>The corpse grows</h2>
@@ -45,7 +45,8 @@
 		{#if corpse.invitePath && active}
 			<div class="invite">
 				<p>
-					Summon a hand for <strong>{SECTION_LABELS[active.position - 1].toLowerCase()}</strong>.
+					Summon an acolyte for <strong>{SECTION_LABELS[active.position - 1].toLowerCase()}</strong
+					>.
 					{active.position === SECTION_COUNT ? 'This is the last one.' : ''}
 				</p>
 				<ShareLink
@@ -54,7 +55,7 @@
 				/>
 			</div>
 		{:else}
-			<p class="muted">The previous hand holds the next invitation.</p>
+			<p class="muted">The previous acolyte holds the next invitation.</p>
 		{/if}
 
 		<PushPrompt

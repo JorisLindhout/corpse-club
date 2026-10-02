@@ -1,6 +1,6 @@
 # Corpse Club
 
-A mobile-first PWA for playing [exquisite corpse](https://en.wikipedia.org/wiki/Exquisite_corpse) with friends. Three people each draw one part of a creature (head, torso, legs) on paper, photograph it, and pass it on. Each hand sees only a thin strip of the previous drawing. When the third section is sealed, everyone is summoned to the reveal.
+A mobile-first PWA for playing [exquisite corpse](https://en.wikipedia.org/wiki/Exquisite_corpse) with friends. Three people each draw one part of a creature (head, torso, legs) on paper, photograph it, and pass it on. Each acolyte sees only a thin strip of the previous drawing. When the third section is sealed, everyone is summoned to the reveal.
 
 No accounts. Turns are handed over with invite links, devices are tracked with a random ID, and Web Push tells people when it is their move.
 
@@ -108,14 +108,14 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 1. **Summon** (`/draw/new`): opens the head of a corpse that doesn't exist yet. Nothing is stored until the head is sealed, so walking away leaves no empty corpse behind.
 2. **Draw**: on paper with the camera (primary) or on screen (fallback). There is no photo upload: only the live camera overlay and the on-screen canvas show the previous edge while drawing, so lines can meet.
 3. **Seal**: uploads the section and, for sections I and II, a separate image of just its bottom strip. Sealing the head (`POST /api/corpse`) creates the corpse and its three sections, each with its own `crypto.randomUUID()` invite token. Later sections are sealed with `POST /api/draw/[token]/submit`. Whoever sealed it gets the next invite link and the native share sheet. Earlier participants who subscribed are told which part was drawn and which comes next.
-4. **Pass on**: the next hand opens the link and sees only the strip. When they seal, they get the last invite link and pass it on, like the folded paper.
+4. **Pass on**: the next acolyte opens the link and sees only the strip. When they seal, they get the last invite link and pass it on, like the folded paper.
 5. **Reveal**: when section III is sealed, every subscribed participant is summoned to `/c/<id>`.
 
 ### Secrecy
 
-- The next hand never receives the full previous section, only the strip image uploaded alongside it (`corpses/{id}/section-{n}-overlap.webp`), served by `/api/draw/[token]/overlap` while that token is open.
+- The next acolyte never receives the full previous section, only the strip image uploaded alongside it (`corpses/{id}/section-{n}-overlap.webp`), served by `/api/draw/[token]/overlap` while that token is open.
 - Full section images are served only once the corpse is complete, or to the device that drew them.
-- An invite token is returned only to the hand that sealed the section before it, and to the creator's device. Responses set `Referrer-Policy: no-referrer` so tokens don't leak through links.
+- An invite token is returned only to the acolyte who sealed the section before it, and to the creator's device. Responses set `Referrer-Policy: no-referrer` so tokens don't leak through links.
 - Push endpoints are never returned by any API.
 
 ### Images
@@ -129,7 +129,7 @@ Write endpoints (create, submit, subscribe, assembled upload) have a fixed-windo
 
 `getUserMedia({ video: { facingMode: 'environment' } })` fills the screen. A framing guide in the section's aspect ratio sits in the middle, and the previous strip is drawn just above its top edge. It is converted to transparent red ink so it stays visible over white paper. Tap the strip to hide or show it. Line up the paper's top edge with the guide, continue the red lines, and capture.
 
-A strip with no ink is a dead end for the next hand, so the browser checks it on both sides (`overlapHasInk` and `stripHasInk` in `src/lib/image.ts`, measured against the strip's own paper tone). Before folding, a hand whose lines stop short of the red line is warned, and "Keep drawing" becomes the main action. A hand who receives a bare strip is told so on the intro and in the camera, instead of being shown an empty overlay.
+A strip with no ink is a dead end for the next acolyte, so the browser checks it on both sides (`overlapHasInk` and `stripHasInk` in `src/lib/image.ts`, measured against the strip's own paper tone). Before folding, an acolyte whose lines stop short of the red line is warned, and "Keep drawing" becomes the main action. An acolyte who receives a bare strip is told so on the intro and in the camera, instead of being shown an empty overlay.
 
 ### Devices
 
@@ -139,18 +139,18 @@ On first visit the server sets a random device ID cookie (`cc_device`), which th
 
 Permission is requested only after a section is sealed, in response to a tap ("Summon me"). Subscriptions belong to the device, not the corpse: one "Summon me" covers every corpse the device creates or draws in. Each endpoint is stored once and follows whichever mark registered it last, so adopting a mark re-registers the browser's subscription.
 
-On iOS, Web Push only works for Home Screen apps (iOS 16.4 and later). An iPhone hand in a browser tab whose device has no subscription yet is asked to add Corpse Club to the Home Screen before drawing, with steps for their browser (Safari, Chrome, or a generic menu). "Draw without summons" skips this. Once any browser on the device has subscribed, for example the installed app, the gate and the prompt stand aside, because summons already reach that device. Embedded browsers of social apps (Instagram, Facebook, TikTok and others) can neither install nor receive push, so they are told to open the page in Safari or the system browser first.
+On iOS, Web Push only works for Home Screen apps (iOS 16.4 and later). An iPhone acolyte in a browser tab whose device has no subscription yet is asked to add Corpse Club to the Home Screen before drawing, with steps for their browser (Safari, Chrome, or a generic menu). "Draw without summons" skips this. Once any browser on the device has subscribed, for example the installed app, the gate and the prompt stand aside, because summons already reach that device. Embedded browsers of social apps (Instagram, Facebook, TikTok and others) can neither install nor receive push, so they are told to open the page in Safari or the system browser first.
 
-Home Screen apps on iOS don't share storage with Safari. To carry the device ID across, each page links to `/manifest.webmanifest?mark=<id>&next=<path>` (manifests are fetched without cookies), and the manifest's `start_url` is `/my-corpses?mark=<id>&next=<path>`. `next` is the draw, status or reveal page the app was added from. On its first standalone launch the installed app adopts the mark and opens `next`; later launches ignore both and strip them from the URL. Normal browser tabs ignore the parameters. If the mark doesn't make it across, **My Corpses** still lets you copy it by hand and adopt it in the installed app.
+Home Screen apps on iOS don't share storage with Safari. To carry the device ID across, each page links to `/manifest.webmanifest?mark=<id>&next=<path>` (manifests are fetched without cookies), and the manifest's `start_url` is `/my-corpses?mark=<id>&next=<path>`. `next` is the draw, status or reveal page the app was added from. On its first standalone launch the installed app adopts the mark and opens `next`; later launches ignore both and strip them from the URL. Normal browser tabs ignore the parameters. If the mark doesn't make it across, **My Corpses** still lets you copy it manually and adopt it in the installed app.
 
 Notifications are sent when:
 
-- a part is sealed: to every subscribed participant except the hand who sealed it, saying who drew it and which part is next
-- the corpse is complete: to every participant who has subscribed, except the hand who just unfolded it
-- a reminder is due: to the creator and the previous hand, 48 hours after a section becomes drawable and again 24 hours later
-- a corpse expires: to the creator and the previous hand, 24 hours after the second reminder
+- a part is sealed: to every subscribed participant except the acolyte who sealed it, saying who drew it and which part is next
+- the corpse is complete: to every participant who has subscribed, except the acolyte who just unfolded it
+- a reminder is due: to the creator and the previous acolyte, 48 hours after a section becomes drawable and again 24 hours later
+- a corpse expires: to the creator and the previous acolyte, 24 hours after the second reminder
 
-Turns never depend on push: each hand gets the next invite link the moment they seal.
+Turns never depend on push: each acolyte gets the next invite link the moment they seal.
 
 ### Data model
 
@@ -167,30 +167,30 @@ There are also indexes for lookups by device and active sections.
 
 ## API
 
-| Method | Route                                 | Description                                                      |
-| ------ | ------------------------------------- | ---------------------------------------------------------------- |
-| POST   | `/api/corpse`                         | Seal the head of a new corpse, creating it; returns invite path  |
-| GET    | `/api/corpse/[id]`                    | Status and metadata (invite path for the creator and prev. hand) |
-| GET    | `/api/corpse/[id]/image`              | Assembled image (stored WebP, or an on-the-fly SVG stack)        |
-| POST   | `/api/corpse/[id]/image`              | Participant uploads the composited image (once)                  |
-| GET    | `/api/corpse/[id]/section/[position]` | One section image (after completion, or to its own drawer)       |
-| GET    | `/api/draw/[token]`                   | Section info and draw state for an invite token                  |
-| GET    | `/api/draw/[token]/overlap`           | The previous section's strip, while the token is open            |
-| POST   | `/api/draw/[token]/submit`            | Seal a section (`image`, `overlap`, optional `name`)             |
-| POST   | `/api/push/subscribe`                 | Store this device's push subscription                            |
-| GET    | `/api/my-corpses`                     | Corpses for the current device (cookie or `x-device-id`)         |
+| Method | Route                                 | Description                                                         |
+| ------ | ------------------------------------- | ------------------------------------------------------------------- |
+| POST   | `/api/corpse`                         | Seal the head of a new corpse, creating it; returns invite path     |
+| GET    | `/api/corpse/[id]`                    | Status and metadata (invite path for the creator and prev. acolyte) |
+| GET    | `/api/corpse/[id]/image`              | Assembled image (stored WebP, or an on-the-fly SVG stack)           |
+| POST   | `/api/corpse/[id]/image`              | Participant uploads the composited image (once)                     |
+| GET    | `/api/corpse/[id]/section/[position]` | One section image (after completion, or to its own drawer)          |
+| GET    | `/api/draw/[token]`                   | Section info and draw state for an invite token                     |
+| GET    | `/api/draw/[token]/overlap`           | The previous section's strip, while the token is open               |
+| POST   | `/api/draw/[token]/submit`            | Seal a section (`image`, `overlap`, optional `name`)                |
+| POST   | `/api/push/subscribe`                 | Store this device's push subscription                               |
+| GET    | `/api/my-corpses`                     | Corpses for the current device (cookie or `x-device-id`)            |
 
 ## Pages
 
-| Route            | Description                                                       |
-| ---------------- | ----------------------------------------------------------------- |
-| `/`              | Landing page with "Summon a corpse"                               |
-| `/draw/new`      | Drawing flow for the head of a new corpse (`/create` redirects)   |
-| `/draw/[token]`  | Drawing flow for one section                                      |
-| `/c/[id]`        | Reveal page and permalink (redirects to status while in progress) |
-| `/c/[id]/status` | Progress; the creator and previous hand get the invite link here  |
-| `/my-corpses`    | Personal gallery and device mark                                  |
-| `/offline`       | Prerendered offline fallback used by the service worker           |
+| Route            | Description                                                         |
+| ---------------- | ------------------------------------------------------------------- |
+| `/`              | Landing page with "Summon a corpse"                                 |
+| `/draw/new`      | Drawing flow for the head of a new corpse (`/create` redirects)     |
+| `/draw/[token]`  | Drawing flow for one section                                        |
+| `/c/[id]`        | Reveal page and permalink (redirects to status while in progress)   |
+| `/c/[id]/status` | Progress; the creator and previous acolyte get the invite link here |
+| `/my-corpses`    | Personal gallery and device mark                                    |
+| `/offline`       | Prerendered offline fallback used by the service worker             |
 
 ## Project layout
 

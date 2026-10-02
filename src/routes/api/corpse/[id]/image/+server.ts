@@ -7,9 +7,9 @@ import type { RequestHandler } from './$types';
 
 async function loadComplete(event: Parameters<RequestHandler>[0]) {
 	const { id } = event.params;
-	if (!isUuid(id)) error(404, 'No such corpse');
+	if (!isUuid(id)) error(404, 'No such corpse.');
 	const found = await getCorpse(getEnv(event).DB, id);
-	if (!found || found.corpse.status !== 'complete') error(404, 'The corpse is not complete');
+	if (!found || found.corpse.status !== 'complete') error(404, 'The corpse is not complete.');
 	return found;
 }
 
@@ -48,7 +48,7 @@ export const GET: RequestHandler = async (event) => {
 	const parts = await Promise.all(
 		sections.map(async (s) => {
 			const object = s.image_key ? await BUCKET.get(s.image_key) : null;
-			if (!object) error(500, 'A section has gone missing');
+			if (!object) error(500, 'A section has gone missing.');
 			const type = object.httpMetadata?.contentType ?? 'image/webp';
 			return `data:${type};base64,${toBase64(await object.arrayBuffer())}`;
 		})
@@ -76,14 +76,14 @@ export const GET: RequestHandler = async (event) => {
 export const POST: RequestHandler = async (event) => {
 	await rateLimit(event, 'assemble', 10);
 	const { corpse, sections } = await loadComplete(event);
-	if (!isParticipant(corpse, sections, event.locals.deviceId)) error(403, 'Not your corpse');
+	if (!isParticipant(corpse, sections, event.locals.deviceId)) error(403, 'Not your corpse.');
 
 	const { BUCKET } = getEnv(event);
 	const key = assembledKey(corpse.id);
 	if (await BUCKET.head(key)) return json({ stored: false });
 
 	const form = await event.request.formData();
-	const image = await readImage(form.get('image'), 'image');
+	const image = await readImage(form.get('image'), 'The corpse');
 	await BUCKET.put(key, image.bytes, { httpMetadata: { contentType: image.type } });
 	return json({ stored: true }, { status: 201 });
 };

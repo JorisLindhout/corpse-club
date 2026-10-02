@@ -1,4 +1,4 @@
-/** The 72 spirits of the Ars Goetia, lent to hands that give no name. */
+/** The 72 spirits of the Ars Goetia, lent to acolytes who give no name. */
 const DEMONS = [
 	'Baal',
 	'Agares',

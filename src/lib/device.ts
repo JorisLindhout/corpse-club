@@ -41,7 +41,7 @@ const LAUNCHED_KEY = 'cc_launched';
 /**
  * The installed app's start URL carries the mark of the browser it was added
  * from, and the page it was added on. Only its first launch may act on them;
- * later launches would otherwise undo a mark adopted by hand, or keep
+ * later launches would otherwise undo a mark adopted manually, or keep
  * returning to an old page.
  */
 export function claimFirstLaunch(mark: string): { first: boolean; adopted: boolean } {

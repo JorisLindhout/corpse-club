@@ -7,10 +7,10 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	const { id } = event.params;
-	if (!isUuid(id)) error(404, 'No such corpse');
+	if (!isUuid(id)) error(404, 'No such corpse.');
 	const env = getEnv(event);
 	const found = await getCorpse(env.DB, id);
-	if (!found) error(404, 'No such corpse');
+	if (!found) error(404, 'No such corpse.');
 
 	const { corpse, sections } = found;
 	if (corpse.status === 'in_progress') redirect(307, `/c/${id}/status`);
@@ -19,7 +19,7 @@ export const load: PageServerLoad = async (event) => {
 	const contributors = sections.map((s) => s.contributor_name);
 	const names = contributors.map((n) => n ?? 'Anonymous');
 	const byline = contributors.every((n) => !n)
-		? 'Drawn by three anonymous hands'
+		? 'Drawn by three anonymous acolytes'
 		: `Drawn by ${names.slice(0, -1).join(', ')} & ${names.at(-1)}`;
 	const hasAssembled = complete ? Boolean(await env.BUCKET.head(`corpses/${id}/assembled`)) : false;
 
@@ -41,7 +41,7 @@ export const load: PageServerLoad = async (event) => {
 						type: 'image/webp',
 						width: 1000,
 						height: 2250,
-						alt: `An exquisite corpse: head, torso and legs drawn by three hands, unfolded. ${byline}.`
+						alt: `An exquisite corpse: head, torso and legs drawn by three acolytes, unfolded. ${byline}.`
 					})
 				} satisfies Preview)
 			: undefined

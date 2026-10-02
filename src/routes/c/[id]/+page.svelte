@@ -74,7 +74,7 @@
 			outcome === 'copied'
 				? 'Link copied.'
 				: outcome === 'failed'
-					? 'Copy the address by hand.'
+					? 'Copy the address yourself.'
 					: '';
 	}
 </script>
@@ -91,7 +91,7 @@
 	<section class="rotted">
 		<p class="label">Laid to rest</p>
 		<h2>This corpse has rotted</h2>
-		<p class="muted">No hand came in time. Some creatures are never meant to be whole.</p>
+		<p class="muted">No acolyte came in time. Some creatures are never meant to be whole.</p>
 		<a class="btn solid block" href={resolve('/draw/[token]', { token: NEW_CORPSE })}>
 			Summon another
 		</a>
@@ -108,14 +108,14 @@
 		{#if revealed}
 			<div class="meta" in:fade={{ duration: 400 }}>
 				<p class="label">{completed}</p>
-				<ol class="hands">
+				<ol class="acolytes">
 					{#each names as name, i (i)}
 						<li><span class="numeral">{ROMAN[i]}</span>{name}</li>
 					{/each}
 				</ol>
 				<div class="actions">
 					<button class="btn solid" type="button" onclick={download} disabled={busy}>
-						{busy ? 'Exhuming...' : 'Download'}
+						{busy ? 'Exhuming…' : 'Download'}
 					</button>
 					<button class="btn" type="button" onclick={share}>Share</button>
 				</div>
@@ -154,20 +154,20 @@
 		padding-top: 1.75rem;
 	}
 
-	.hands {
+	.acolytes {
 		list-style: none;
 		margin: 0;
 		padding: 0;
 	}
 
-	.hands li {
+	.acolytes li {
 		display: grid;
 		grid-template-columns: 2.5rem 1fr;
 		align-items: baseline;
 		padding: 0.75rem 0;
 	}
 
-	.hands li + li {
+	.acolytes li + li {
 		border-top: var(--line-faint);
 	}
 

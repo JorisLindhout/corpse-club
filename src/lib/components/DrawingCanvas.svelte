@@ -188,7 +188,7 @@
 	</header>
 
 	<div class="wrap" bind:clientWidth={wrapWidth} bind:clientHeight={wrapHeight}>
-		<!-- Strokes may start on the previous hand's strip; ink is clipped at the paper's edge. -->
+		<!-- Strokes may start on the previous acolyte's strip; ink is clipped at the paper's edge. -->
 		<div
 			class="sheet"
 			role="application"
@@ -206,7 +206,7 @@
 				<canvas bind:this={canvas} width={SECTION_WIDTH} height={SECTION_HEIGHT}></canvas>
 				{#if !isLast}
 					<div class="zone" style:height="{(OVERLAP_HEIGHT / SECTION_HEIGHT) * 100}%">
-						<span>Seen by the next hand</span>
+						<span>Seen by the next acolyte</span>
 					</div>
 				{/if}
 			</div>

@@ -25,9 +25,9 @@ export const load: PageServerLoad = async (event) => {
 		};
 	}
 
-	if (!isUuid(token)) error(404, 'This invitation leads nowhere');
+	if (!isUuid(token)) error(404, 'This invitation leads nowhere.');
 	const found = await getByToken(env.DB, token);
-	if (!found) error(404, 'This invitation leads nowhere');
+	if (!found) error(404, 'This invitation leads nowhere.');
 
 	const { corpse, sections, section } = found;
 	const state = drawState(corpse, sections, section);

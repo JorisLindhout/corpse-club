@@ -16,9 +16,9 @@
 		const outcome = await shareLink({ url, title, text });
 		feedback =
 			outcome === 'copied'
-				? 'Copied. Send it to the next hand.'
+				? 'Copied. Send it to the next acolyte.'
 				: outcome === 'failed'
-					? 'Copy the link above by hand.'
+					? 'Copy the link above yourself.'
 					: outcome === 'shared'
 						? 'Sent into the dark.'
 						: '';

@@ -19,7 +19,7 @@ const ICONS = [
 /**
  * Manifests are fetched without cookies, so the page passes its mark in the
  * link. iOS gives Home Screen apps fresh storage; the start URL carries the
- * mark across so the installed app wakes up as the same hand, and `next`
+ * mark across so the installed app wakes up as the same acolyte, and `next`
  * brings it back to the page it was added from.
  */
 export const GET: RequestHandler = ({ url }) => {

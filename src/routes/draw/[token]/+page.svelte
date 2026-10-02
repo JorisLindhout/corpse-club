@@ -35,15 +35,16 @@
 	let previewUrl = $state<string | null>(null);
 	let failure = $state<string | null>(null);
 	let sealed = $state<{ corpseId: string; nextInvitePath: string | null } | null>(null);
-	/** The previous hand's strip holds no lines to continue. */
+	/** The previous acolyte's strip holds no lines to continue. */
 	let bareEdge = $state(false);
-	/** No lines reach this section's own strip, so the next hand would see nothing. */
+	/** No lines reach this section's own strip, so the next acolyte would see nothing. */
 	let bareFold = $state(false);
-	/** Hands that cannot be summoned where they are get sent home before they draw. */
+	/** Acolytes who cannot be summoned where they are get sent home before they draw. */
 	let gate = $state<'checking' | 'ios-install' | 'in-app' | 'open'>('checking');
 
 	let numeral = $derived(ROMAN[data.position - 1]);
 	let part = $derived(SECTION_LABELS[data.position - 1]);
+	let nextPart = $derived(SECTION_LABELS[data.position]?.toLowerCase());
 	let title = $derived(`${numeral}. ${part}`);
 	let partLabel = $derived(`${part} · the ${ORDINALS[data.position - 1]} of three parts`);
 	let reviewing = $derived(step === 'review' || step === 'sending');
@@ -131,7 +132,7 @@
 	/>
 {/if}
 
-<!-- Kept mounted, hidden, while reviewing so the hand can return to the same page. -->
+<!-- Kept mounted, hidden, while reviewing so the acolyte can return to the same page. -->
 {#if step === 'canvas' || (reviewing && drawnWith === 'canvas')}
 	<div hidden={step !== 'canvas'}>
 		<DrawingCanvas
@@ -167,31 +168,31 @@
 
 		<section class="content">
 			{#if data.state === 'expired'}
-				<p class="label">Too late</p>
+				<p class="label">Laid to rest</p>
 				<h2>This corpse has rotted</h2>
-				<p class="muted">No hand came in time. It has been laid to rest.</p>
+				<p class="muted">No acolyte came in time. Some creatures are never meant to be whole.</p>
 				<a class="btn solid block" href={resolve('/')}>Summon another</a>
 			{:else if data.state === 'complete' && step !== 'sealed' && data.isMine}
 				<p class="label">{partLabel}</p>
 				<h2>{part} is drawn</h2>
-				<p class="muted">Your hand has done its part.</p>
+				<p class="muted">Your part is done.</p>
 				<a class="btn block" href={resolve('/c/[id]/status', { id: data.corpseId })}>
 					Watch over the corpse
 				</a>
 			{:else if data.state === 'complete' && step !== 'sealed'}
 				<p class="label">{partLabel}</p>
 				<h2>Already drawn</h2>
-				<p class="muted">Another hand has already drawn this part.</p>
+				<p class="muted">Another acolyte has already drawn this part.</p>
 				<a class="btn block" href={resolve('/c/[id]', { id: data.corpseId })}>See the corpse</a>
 			{:else if data.state === 'locked'}
 				<p class="label">{partLabel}</p>
 				<h2>Not yet</h2>
-				<p class="muted">The previous hand is still drawing. Return when you are summoned.</p>
+				<p class="muted">The previous acolyte is still drawing. Return when you are summoned.</p>
 			{:else if step === 'sealed' && sealed}
 				<p class="label">{partLabel}</p>
 				<h2>{part} is drawn</h2>
 				{#if sealed.nextInvitePath}
-					<p>Pass the corpse on. Send this link to the next hand. They will see only the edge.</p>
+					<p>Send this link to whoever draws {nextPart}. They will see only the edge you left.</p>
 					<ShareLink path={sealed.nextInvitePath} text="Draw the next part of a corpse." />
 				{/if}
 				<PushPrompt
@@ -216,7 +217,7 @@
 				{/if}
 				{#if bareFold}
 					<p class="blood" role="alert">
-						Nothing crosses the red line. The next hand would find a bare edge, with no lines to
+						Nothing crosses the red line. The next acolyte would find a bare edge, with no lines to
 						continue. {drawnWith === 'canvas'
 							? 'Draw down into the strip at the bottom.'
 							: 'Shift the photo up until your lines reach it, or draw further down your paper and retake.'}
@@ -224,8 +225,8 @@
 				{:else}
 					<p class="muted">
 						{data.isLast
-							? 'Yours is the last hand. Unfolding reveals the whole creature to all three.'
-							: 'Once folded, the next hand sees only the strip below the red line. There is no going back.'}
+							? 'You are the last acolyte. Unfolding reveals the whole creature to all three.'
+							: 'Once folded, the next acolyte sees only the strip below the red line. There is no going back.'}
 					</p>
 				{/if}
 				{#if failure}
@@ -241,7 +242,7 @@
 						disabled={step === 'sending'}
 					>
 						{#if step === 'sending'}
-							<span class="pulse">{data.isLast ? 'Unfolding...' : 'Folding...'}</span>
+							<span class="pulse">{data.isLast ? 'Unfolding…' : 'Folding…'}</span>
 						{:else if bareFold}
 							Fold it anyway
 						{:else}
@@ -283,9 +284,9 @@
 
 				{#if data.overlapUrl && bareEdge}
 					<p>
-						You draw <strong>{part.toLowerCase()}</strong>. The previous hand stopped short of the
-						fold and left the edge bare. There are no lines to continue, so begin anywhere along the
-						top edge of your page.
+						You draw <strong>{part.toLowerCase()}</strong>. The previous acolyte stopped short of
+						the fold and left the edge bare. There are no lines to continue, so begin anywhere along
+						the top edge of your page.
 					</p>
 					<OverlapStrip src={data.overlapUrl} label="A bare edge" />
 				{:else if data.overlapUrl}
@@ -297,13 +298,13 @@
 				{:else}
 					<p>
 						You draw <strong>{part.toLowerCase()}</strong>. Fill the page and let your lines run off
-						the bottom edge. The next hand sees only that sliver.
+						the bottom edge. The next acolyte sees only that sliver.
 					</p>
 				{/if}
 
 				{#if !data.isLast && data.overlapUrl}
 					<p class="muted">
-						Let your lines run off the bottom edge, so the next hand has something to continue.
+						Let your lines run off the bottom edge, so the next acolyte has something to continue.
 					</p>
 				{/if}
 

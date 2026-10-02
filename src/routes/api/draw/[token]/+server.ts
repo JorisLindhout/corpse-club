@@ -6,9 +6,9 @@ import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async (event) => {
 	const { token } = event.params;
-	if (!isUuid(token)) error(404, 'This invitation leads nowhere');
+	if (!isUuid(token)) error(404, 'This invitation leads nowhere.');
 	const found = await getByToken(getEnv(event).DB, token);
-	if (!found) error(404, 'This invitation leads nowhere');
+	if (!found) error(404, 'This invitation leads nowhere.');
 
 	const { corpse, sections, section } = found;
 	return json(

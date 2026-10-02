@@ -54,7 +54,7 @@
 
 <div class="summons card">
 	{#if status === 'checking'}
-		<p class="muted pulse">Listening...</p>
+		<p class="muted pulse">Listening…</p>
 	{:else if status === 'subscribed'}
 		<p class="label">Bound</p>
 		<p>You will be summoned, for this corpse and every one after.</p>
@@ -86,7 +86,7 @@
 		<p class="label">Summons</p>
 		<p>{reason}</p>
 		<button class="btn block" type="button" onclick={subscribe} disabled={status === 'working'}>
-			{status === 'working' ? 'Binding...' : 'Summon me'}
+			{status === 'working' ? 'Binding…' : 'Summon me'}
 		</button>
 		{#if status === 'failed'}
 			<p class="muted">The summons failed. Try again.</p>

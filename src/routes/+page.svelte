@@ -22,7 +22,7 @@
 </svelte:head>
 
 <section class="hero">
-	<p class="label">Exquisite corpse for three hands</p>
+	<p class="label">Exquisite corpse for three acolytes</p>
 	<h1>Corpse<br />Club</h1>
 
 	<div class="stage">

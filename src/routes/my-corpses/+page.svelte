@@ -26,9 +26,9 @@
 		});
 	}
 
-	function hands(sections: (typeof data.corpses)[number]['sections']) {
+	function acolytes(sections: (typeof data.corpses)[number]['sections']) {
 		const named = sections.filter((s) => s.status === 'complete').map((s) => s.name ?? 'Anonymous');
-		return named.length ? named.join(' · ') : 'No hands yet';
+		return named.length ? named.join(' · ') : 'No acolytes yet';
 	}
 
 	async function copyMark() {
@@ -49,7 +49,8 @@
 	}
 
 	const confirmRemove: SubmitFunction = ({ cancel }) => {
-		if (!confirm('Remove this corpse from your collection? The other hands keep theirs.')) cancel();
+		if (!confirm('Remove this corpse from your collection? The other acolytes keep theirs.'))
+			cancel();
 	};
 </script>
 
@@ -59,7 +60,7 @@
 
 <section class="gallery">
 	<header>
-		<p class="label">Your hands have touched</p>
+		<p class="label">Every corpse you've touched</p>
 		<h2>My corpses</h2>
 	</header>
 
@@ -89,7 +90,7 @@
 						<div class="info">
 							<span class="status">{STATUS_LABEL[corpse.status]}</span>
 							<span class="muted small">{date(corpse.completedAt ?? corpse.createdAt)}</span>
-							<span class="small">{hands(corpse.sections)}</span>
+							<span class="small">{acolytes(corpse.sections)}</span>
 						</div>
 					</a>
 					<form method="POST" action="?/remove" use:enhance={confirmRemove}>

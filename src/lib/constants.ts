@@ -4,13 +4,13 @@ export const SECTION_COUNT = 3;
 export const SECTION_WIDTH = 1000;
 export const SECTION_HEIGHT = 750;
 
-/** Bottom strip of each section revealed to the next hand. */
+/** Bottom strip of each section revealed to the next acolyte. */
 export const OVERLAP_HEIGHT = 60;
 
 export const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 export const MAX_NAME_LENGTH = 40;
 
-export const SECTION_LABELS = ['The Head', 'The Torso', 'The Legs'] as const;
+export const SECTION_LABELS = ['The head', 'The torso', 'The legs'] as const;
 export const ROMAN = ['I', 'II', 'III'] as const;
 
 export const DEVICE_COOKIE = 'cc_device';
