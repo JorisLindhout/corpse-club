@@ -18,7 +18,8 @@ export interface Summons {
 
 /**
  * Sends a notification to every device that created or drew in a corpse, or
- * only to `deviceId`. Dead subscriptions are pruned.
+ * only to `deviceId`. Devices that removed the corpse are skipped, and dead
+ * subscriptions are pruned.
  */
 export async function summon(
 	env: PushEnv,
@@ -39,7 +40,7 @@ export async function summon(
 	};
 	const subs = (
 		options.deviceId
-			? await deviceSubscriptions(env.DB, options.deviceId)
+			? await deviceSubscriptions(env.DB, options.deviceId, corpseId)
 			: await participantSubscriptions(env.DB, corpseId)
 	).filter((s) => !options.excludeDeviceId || s.device_id !== options.excludeDeviceId);
 

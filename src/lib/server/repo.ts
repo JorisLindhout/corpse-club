@@ -290,18 +290,24 @@ export async function saveSubscription(
 	]);
 }
 
+/** Subscriptions of `deviceId`, unless it has removed the corpse from its collection. */
 export async function deviceSubscriptions(
 	db: D1Database,
-	deviceId: string
+	deviceId: string,
+	corpseId: string
 ): Promise<SubscriptionRow[]> {
 	const { results } = await db
-		.prepare('SELECT * FROM push_subscriptions WHERE device_id = ?')
-		.bind(deviceId)
+		.prepare(
+			`SELECT * FROM push_subscriptions
+			 WHERE device_id = ?1
+			   AND device_id NOT IN (SELECT device_id FROM hidden_corpses WHERE corpse_id = ?2)`
+		)
+		.bind(deviceId, corpseId)
 		.all<SubscriptionRow>();
 	return results;
 }
 
-/** Subscriptions of every device that created or drew in the corpse. */
+/** Subscriptions of every device that created or drew in the corpse and still keeps it. */
 export async function participantSubscriptions(
 	db: D1Database,
 	corpseId: string
@@ -312,7 +318,8 @@ export async function participantSubscriptions(
 			 WHERE device_id IN (
 			   SELECT creator_device_id FROM corpses WHERE id = ?1
 			   UNION SELECT device_id FROM sections WHERE corpse_id = ?1
-			 )`
+			 )
+			   AND device_id NOT IN (SELECT device_id FROM hidden_corpses WHERE corpse_id = ?1)`
 		)
 		.bind(corpseId)
 		.all<SubscriptionRow>();
